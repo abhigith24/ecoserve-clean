@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EcoServe – Smart Features</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+  <link href="/css/style.css" rel="stylesheet"/>
+  <style>
+    /* ── AI Chat ──────────────────────────────────────────── */
+    .chat-wrap {
+      height: 420px; overflow-y: auto; background: var(--green-50);
+      border-radius: var(--radius); padding: 1rem; display: flex;
+      flex-direction: column; gap: .75rem;
+      border: 1.5px solid var(--green-100);
+    }
+    .chat-wrap::-webkit-scrollbar { width: 4px; }
+    .chat-wrap::-webkit-scrollbar-thumb { background: var(--green-300); border-radius: 4px; }
+
+    .msg { display: flex; gap: .6rem; align-items: flex-end; }
+    .msg.user { flex-direction: row-reverse; }
+
+    .bubble {
+      max-width: 78%; padding: .7rem 1rem; border-radius: 18px;
+      font-size: .875rem; line-height: 1.55; word-break: break-word;
+    }
+    .bubble.bot {
+      background: var(--white); border: 1.5px solid var(--green-100);
+      color: var(--text); border-bottom-left-radius: 4px;
+      box-shadow: 0 2px 8px rgba(13,43,26,.06);
+    }
+    .bubble.user {
+      background: var(--green-600); color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+    .avatar {
+      width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: .85rem;
+    }
+    .avatar.bot { background: var(--green-100); }
+    .avatar.user { background: var(--green-600); color: #fff; font-size: .7rem; font-weight: 700; }
+
+    .typing-indicator { display: flex; gap: 4px; align-items: center; padding: .5rem .75rem; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green-400); animation: bounce .9s infinite; }
+    .dot:nth-child(2) { animation-delay: .15s; }
+    .dot:nth-child(3) { animation-delay: .3s; }
+    @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+
+    .chat-input-row { display: flex; gap: .5rem; margin-top: .75rem; }
+    .chat-input-row input { flex: 1; border: 1.5px solid var(--border); border-radius: 30px; padding: .6rem 1.1rem; font-size: .875rem; outline: none; transition: border-color .2s; }
+    .chat-input-row input:focus { border-color: var(--green-500); }
+    .chat-input-row button { width: 40px; height: 40px; border-radius: 50%; background: var(--green-600); color: #fff; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .2s; flex-shrink: 0; }
+    .chat-input-row button:hover { background: var(--green-700); }
+
+    .quick-pills { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .75rem; }
+    .quick-pill { padding: .3rem .8rem; border-radius: 20px; background: var(--white); border: 1.5px solid var(--green-200); font-size: .75rem; color: var(--green-700); cursor: pointer; transition: all .2s; font-weight: 500; }
+    .quick-pill:hover { background: var(--green-100); border-color: var(--green-400); }
+
+    /* ── Eco Facts ────────────────────────────────────────── */
+    .fact-card {
+      background: linear-gradient(135deg, var(--green-900), var(--green-700));
+      border-radius: var(--radius-lg); padding: 2rem; color: #fff;
+      position: relative; overflow: hidden; min-height: 200px;
+      display: flex; flex-direction: column; justify-content: space-between;
+    }
+    .fact-card::before {
+      content: '♻️'; position: absolute; right: 1.5rem; top: 1rem;
+      font-size: 5rem; opacity: .08;
+    }
+    .fact-number {
+      font-family: var(--font-display); font-size: 3.5rem; font-weight: 800;
+      color: var(--green-400); line-height: 1; margin-bottom: .25rem;
+    }
+    .fact-text { font-size: 1rem; color: rgba(255,255,255,.85); line-height: 1.5; }
+    .fact-source { font-size: .72rem; color: rgba(255,255,255,.45); margin-top: .75rem; }
+    .fact-nav { display: flex; gap: .5rem; }
+    .fact-nav button {
+      width: 36px; height: 36px; border-radius: 50%; border: 2px solid rgba(255,255,255,.25);
+      background: transparent; color: rgba(255,255,255,.7); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; transition: all .2s;
+    }
+    .fact-nav button:hover { background: rgba(255,255,255,.15); color: #fff; border-color: rgba(255,255,255,.5); }
+
+    /* ── Impact Tracker ───────────────────────────────────── */
+    .impact-ring {
+      width: 130px; height: 130px; position: relative; margin: 0 auto 1rem;
+    }
+    .impact-ring svg { transform: rotate(-90deg); }
+    .impact-ring .ring-bg { fill: none; stroke: var(--green-100); stroke-width: 10; }
+    .impact-ring .ring-fill { fill: none; stroke: var(--green-500); stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1); }
+    .impact-ring .ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .impact-ring .ring-val { font-family: var(--font-display); font-size: 1.4rem; font-weight: 800; color: var(--green-800); line-height: 1; }
+    .impact-ring .ring-unit { font-size: .7rem; color: var(--text-muted); margin-top: .2rem; }
+
+    .impact-stat { text-align: center; padding: 1rem; border-radius: var(--radius); background: var(--green-50); border: 1px solid var(--green-100); }
+    .impact-stat .val { font-family: var(--font-display); font-size: 1.6rem; font-weight: 800; color: var(--green-700); }
+    .impact-stat .lbl { font-size: .75rem; color: var(--text-muted); margin-top: .2rem; }
+
+    .tree-row { display: flex; flex-wrap: wrap; gap: .25rem; margin-top: .5rem; }
+    .tree-icon { font-size: 1.3rem; animation: pop .3s ease forwards; opacity: 0; }
+    @keyframes pop { to { opacity: 1; transform: scale(1.1); } }
+
+    /* ── Live Tracking ────────────────────────────────────── */
+    .map-area {
+      height: 340px; background: var(--green-50); border-radius: var(--radius);
+      border: 1.5px solid var(--green-100); position: relative; overflow: hidden;
+    }
+    .map-grid {
+      position: absolute; inset: 0;
+      background-image: linear-gradient(rgba(34,136,63,.07) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(34,136,63,.07) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+    /* Roads */
+    .road { position: absolute; background: rgba(255,255,255,.85); border-radius: 2px; }
+    .road.h { height: 10px; left: 0; right: 0; }
+    .road.v { width: 10px; top: 0; bottom: 0; }
+
+    .truck-marker {
+      position: absolute; width: 38px; height: 38px; border-radius: 50%;
+      background: var(--green-600); display: flex; align-items: center;
+      justify-content: center; font-size: 1.1rem; box-shadow: 0 4px 12px rgba(34,136,63,.4);
+      transform: translate(-50%,-50%); transition: left 2s linear, top 2s linear;
+      z-index: 10; cursor: pointer;
+    }
+    .truck-marker::after {
+      content: ''; position: absolute; width: 52px; height: 52px;
+      border-radius: 50%; background: rgba(34,136,63,.2);
+      animation: ripple 1.8s infinite;
+    }
+    @keyframes ripple { 0%{transform:scale(.8);opacity:1} 100%{transform:scale(1.6);opacity:0} }
+
+    .pin-marker {
+      position: absolute; transform: translate(-50%,-100%);
+      display: flex; flex-direction: column; align-items: center; z-index: 9;
+    }
+    .pin-dot {
+      width: 28px; height: 28px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+      display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 8px rgba(0,0,0,.2);
+    }
+    .pin-dot span { transform: rotate(45deg); font-size: .85rem; }
+    .pin-label {
+      margin-top: 4px; background: var(--white); border-radius: 6px; padding: .2rem .5rem;
+      font-size: .7rem; font-weight: 600; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,.1);
+      color: var(--text);
+    }
+
+    .track-card {
+      background: var(--white); border-radius: var(--radius-sm); padding: .85rem 1rem;
+      border: 1.5px solid var(--border); display: flex; align-items: center;
+      gap: .75rem; transition: all .2s; cursor: pointer;
+    }
+    .track-card:hover { border-color: var(--green-400); background: var(--green-50); }
+    .track-card.active { border-color: var(--green-500); background: var(--green-50); }
+    .track-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+    .status-timeline { display: flex; flex-direction: column; gap: 0; }
+    .timeline-step { display: flex; gap: .75rem; }
+    .tline-icon { display: flex; flex-direction: column; align-items: center; }
+    .tline-circle { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .75rem; flex-shrink: 0; }
+    .tline-bar { width: 2px; flex: 1; min-height: 20px; margin: 3px auto; }
+    .tline-content { padding: .15rem 0 .75rem; }
+    .tline-title { font-family: var(--font-display); font-weight: 700; font-size: .85rem; }
+    .tline-time { font-size: .72rem; color: var(--text-muted); }
+
+    .live-badge {
+      display: inline-flex; align-items: center; gap: .4rem;
+      background: #dcfce7; color: #166534; padding: .25rem .75rem;
+      border-radius: 20px; font-size: .75rem; font-weight: 700;
+    }
+    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; animation: blink 1.2s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    /* ── Tab navigation ───────────────────────────────────── */
+    .feature-tabs { display: flex; gap: .5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .ftab {
+      padding: .6rem 1.3rem; border-radius: 30px; border: 2px solid var(--border);
+      background: var(--white); font-family: var(--font-display); font-weight: 700;
+      font-size: .85rem; color: var(--text-muted); cursor: pointer; transition: all .2s;
+      display: flex; align-items: center; gap: .4rem;
+    }
+    .ftab:hover { border-color: var(--green-400); color: var(--green-700); }
+    .ftab.active { background: var(--green-700); color: #fff; border-color: var(--green-700); }
+    .fpanel { display: none; } .fpanel.active { display: block; }
+  </style>
+</head>
+<body>
+<nav class="eco-navbar" id="app-navbar"></nav>
+<div class="sidebar" id="app-sidebar"></div>
+<div class="main-content">
+
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">🤖 Smart EcoServe Features</h1>
+      <p class="page-subtitle">AI Assistant · Eco Facts · Impact Tracker · Live Tracking</p>
+    </div>
+    <span class="live-badge"><span class="live-dot"></span> Live</span>
+  </div>
+
+  <!-- Feature Tabs -->
+  <div class="feature-tabs">
+    <button class="ftab active" onclick="switchFeature('ai', this)">🤖 AI Assistant</button>
+    <button class="ftab" onclick="switchFeature('facts', this)">🌍 Eco Facts</button>
+    <button class="ftab" onclick="switchFeature('impact', this)">📊 My Impact</button>
+    <button class="ftab" onclick="switchFeature('track', this)">📍 Live Tracking</button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       PANEL 1: AI ASSISTANT
+  ════════════════════════════════════════════════════════ -->
+  <div class="fpanel active" id="panel-ai">
+    <div class="row g-3">
+      <div class="col-lg-8">
+        <div class="eco-card">
+          <div class="eco-card-title">
+            <span style="font-size:1.2rem;">🤖</span> EcoBot — AI Waste Assistant
+            <span class="ms-2 live-badge" style="font-size:.7rem;"><span class="live-dot"></span> Powered by GROQ AI</span>
+          </div>
+
+          <!-- Quick prompts -->
+          <div class="quick-pills">
+            <span class="quick-pill" onclick="sendQuick(this)">♻️ How to recycle plastic?</span>
+            <span class="quick-pill" onclick="sendQuick(this)">☣️ Dispose hazardous waste safely</span>
+            <span class="quick-pill" onclick="sendQuick(this)">🌿 Benefits of composting</span>
+            <span class="quick-pill" onclick="sendQuick(this)">💡 Reduce household waste tips</span>
+            <span class="quick-pill" onclick="sendQuick(this)">🔋 E-waste disposal guide</span>
+            <span class="quick-pill" onclick="sendQuick(this)">📅 When is my pickup?</span>
+          </div>
+
+          <!-- Chat window -->
+          <div class="chat-wrap" id="chat-window">
+            <div class="msg">
+              <div class="avatar bot">🌿</div>
+              <div class="bubble bot">
+                Hi! I'm <strong>EcoBot</strong>, your AI waste management assistant 🌍<br><br>
+                Ask me anything about waste disposal, recycling, composting, eco tips, or your pickup requests. I'm here to help make waste management effortless!
+              </div>
+            </div>
+          </div>
+
+          <!-- Input -->
+          <div class="chat-input-row">
+            <input type="text" id="chat-input" placeholder="Ask EcoBot anything about waste management..." onkeydown="if(event.key==='Enter') sendMessage()"/>
+            <button onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+          </div>
+          <div style="font-size:.72rem;color:var(--text-muted);margin-top:.5rem;text-align:center;">
+            <i class="fas fa-lock me-1"></i>Powered by GROQ AI · Responses are for guidance only
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4">
+        <div class="eco-card mb-3">
+          <div class="eco-card-title"><i class="fas fa-lightbulb text-primary"></i> EcoBot Can Help With</div>
+          <div style="display:flex;flex-direction:column;gap:.6rem;font-size:.85rem;">
+            <div class="d-flex align-items-center gap-2"><span style="color:var(--green-600);">♻️</span> Recycling guidelines by material</div>
+            <div class="d-flex align-items-center gap-2"><span style="color:var(--green-600);">🗑️</span> Correct waste segregation</div>
+            <div class="d-flex align-items-center gap-2"><span style="color:var(--green-600);">☣️</span> Hazardous waste safety</div>
+            <div class="d-flex align-items-center gap-2"><span style="color:var(--green-600);">🌿</span> Composting & organic waste</div>
+            <div class="d-flex align-items-center gap-2"><span style="color:var(--green-600);">💻</span> E-waste disposal locations</div>
+            <div class="d-flex align-items-center gap-2"><span style="color:var(--green-600);">📊</span> Environmental impact facts</div>
+            <div class="d-flex align-items-center gap-2"><span style="color:var(--green-600);">📅</span> Request & schedule queries</div>
+          </div>
+        </div>
+        <div class="eco-card" style="background:linear-gradient(135deg,var(--green-900),var(--green-700));border:none;color:#fff;">
+          <div style="font-family:var(--font-display);font-weight:700;margin-bottom:.5rem;">🌍 Did You Know?</div>
+          <p style="font-size:.85rem;color:rgba(255,255,255,.8);line-height:1.6;" id="sidebar-fact">Loading eco fact...</p>
+          <button onclick="rotateSidebarFact()" style="background:rgba(255,255,255,.15);border:none;color:rgba(255,255,255,.8);border-radius:6px;padding:.3rem .75rem;font-size:.75rem;cursor:pointer;margin-top:.5rem;">
+            <i class="fas fa-sync-alt me-1"></i> New Fact
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       PANEL 2: ECO FACTS
+  ════════════════════════════════════════════════════════ -->
+  <div class="fpanel" id="panel-facts">
+    <div class="row g-3">
+      <!-- Main Fact Card -->
+      <div class="col-lg-6">
+        <div class="fact-card" id="main-fact-card">
+          <div>
+            <div style="font-size:.75rem;font-weight:700;letter-spacing:.1em;color:var(--green-300);text-transform:uppercase;margin-bottom:.5rem;" id="fact-category">Loading...</div>
+            <div class="fact-number" id="fact-number">—</div>
+            <div class="fact-text" id="fact-text">Fetching eco fact...</div>
+            <div class="fact-source" id="fact-source"></div>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mt-3">
+            <div class="fact-nav">
+              <button onclick="prevFact()"><i class="fas fa-chevron-left"></i></button>
+              <button onclick="nextFact()"><i class="fas fa-chevron-right"></i></button>
+            </div>
+            <div id="fact-counter" style="font-size:.75rem;color:rgba(255,255,255,.4);">1 / 12</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fact Grid -->
+      <div class="col-lg-6">
+        <div class="row g-2" id="fact-grid">
+          <!-- populated by JS -->
+        </div>
+      </div>
+
+      <!-- Category Cards -->
+      <div class="col-12">
+        <div class="eco-card">
+          <div class="eco-card-title"><i class="fas fa-globe-asia text-primary"></i> Waste by Category — Global Facts</div>
+          <div class="row g-3" id="category-facts"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       PANEL 3: ENVIRONMENTAL IMPACT
+  ════════════════════════════════════════════════════════ -->
+  <div class="fpanel" id="panel-impact">
+    <div class="row g-3 mb-3">
+      <div class="col-12">
+        <div class="eco-card" style="background:linear-gradient(135deg,var(--green-900),var(--green-700));border:none;color:#fff;">
+          <div class="row align-items-center">
+            <div class="col-md-8">
+              <h5 style="font-family:var(--font-display);color:#fff;font-size:1.3rem;">Your Environmental Impact 🌱</h5>
+              <p style="color:rgba(255,255,255,.75);font-size:.9rem;margin:0;">Every kg of waste properly managed makes a difference. Here's your contribution so far.</p>
+            </div>
+            <div class="col-md-4 text-md-end mt-2 mt-md-0">
+              <div id="eco-score-badge" style="display:inline-block;background:rgba(255,255,255,.15);border-radius:12px;padding:.75rem 1.5rem;text-align:center;">
+                <div style="font-family:var(--font-display);font-size:2rem;font-weight:800;color:var(--green-400);" id="eco-score">—</div>
+                <div style="font-size:.75rem;color:rgba(255,255,255,.65);">Eco Score</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <!-- Rings -->
+      <div class="col-md-4">
+        <div class="eco-card text-center h-100">
+          <div class="eco-card-title justify-content-center"><i class="fas fa-recycle text-primary"></i> Waste Diverted</div>
+          <div class="impact-ring">
+            <svg viewBox="0 0 130 130" width="130" height="130">
+              <circle class="ring-bg" cx="65" cy="65" r="55"/>
+              <circle class="ring-fill" id="ring-recycled" cx="65" cy="65" r="55" stroke-dasharray="345.4" stroke-dashoffset="345.4"/>
+            </svg>
+            <div class="ring-label"><div class="ring-val" id="ring-val-recycled">0%</div><div class="ring-unit">recycled</div></div>
+          </div>
+          <p class="text-muted" style="font-size:.82rem;">Percentage of your waste that was properly recycled or composted instead of going to landfill.</p>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="eco-card text-center h-100">
+          <div class="eco-card-title justify-content-center"><i class="fas fa-wind text-primary"></i> CO₂ Prevented</div>
+          <div class="impact-ring">
+            <svg viewBox="0 0 130 130" width="130" height="130">
+              <circle class="ring-bg" cx="65" cy="65" r="55"/>
+              <circle class="ring-fill" id="ring-co2" cx="65" cy="65" r="55" stroke-dasharray="345.4" stroke-dashoffset="345.4" stroke="#3b82f6"/>
+            </svg>
+            <div class="ring-label"><div class="ring-val" id="ring-val-co2">0</div><div class="ring-unit">kg CO₂</div></div>
+          </div>
+          <p class="text-muted" style="font-size:.82rem;">Estimated carbon emissions prevented through proper waste disposal and recycling.</p>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="eco-card text-center h-100">
+          <div class="eco-card-title justify-content-center"><i class="fas fa-tint text-primary"></i> Water Saved</div>
+          <div class="impact-ring">
+            <svg viewBox="0 0 130 130" width="130" height="130">
+              <circle class="ring-bg" cx="65" cy="65" r="55"/>
+              <circle class="ring-fill" id="ring-water" cx="65" cy="65" r="55" stroke-dasharray="345.4" stroke-dashoffset="345.4" stroke="#0ea5e9"/>
+            </svg>
+            <div class="ring-label"><div class="ring-val" id="ring-val-water">0</div><div class="ring-unit">litres</div></div>
+          </div>
+          <p class="text-muted" style="font-size:.82rem;">Litres of water saved by recycling materials instead of producing new raw materials.</p>
+        </div>
+      </div>
+
+      <!-- Impact Stats -->
+      <div class="col-12">
+        <div class="row g-2" id="impact-stats-row">
+          <div class="col-6 col-md-3"><div class="impact-stat"><div class="val" id="imp-requests">—</div><div class="lbl">Total Pickups Completed</div></div></div>
+          <div class="col-6 col-md-3"><div class="impact-stat"><div class="val" id="imp-kg">—</div><div class="lbl">Total Waste (kg)</div></div></div>
+          <div class="col-6 col-md-3"><div class="impact-stat"><div class="val" id="imp-trees">—</div><div class="lbl">Equivalent Trees Planted 🌳</div></div></div>
+          <div class="col-6 col-md-3"><div class="impact-stat"><div class="val" id="imp-meals">—</div><div class="lbl">Meals Saved from Food Waste</div></div></div>
+        </div>
+      </div>
+
+      <!-- Trees visual -->
+      <div class="col-12">
+        <div class="eco-card">
+          <div class="eco-card-title"><i class="fas fa-tree text-primary"></i> Your Tree Equivalent 🌳</div>
+          <p class="text-muted" style="font-size:.85rem;">Each properly recycled pickup is equivalent to planting a tree. Here's your forest:</p>
+          <div class="tree-row" id="tree-row"></div>
+          <div style="font-size:.78rem;color:var(--text-muted);margin-top:.75rem;" id="tree-label"></div>
+        </div>
+      </div>
+
+      <!-- Tips -->
+      <div class="col-12">
+        <div class="eco-card">
+          <div class="eco-card-title"><i class="fas fa-star text-primary"></i> Personalised Eco Tips</div>
+          <div class="row g-2" id="eco-tips-row"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       PANEL 4: LIVE TRACKING
+  ════════════════════════════════════════════════════════ -->
+  <div class="fpanel" id="panel-track">
+    <div class="row g-3">
+      <div class="col-lg-8">
+        <div class="eco-card">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="eco-card-title mb-0"><i class="fas fa-map-marked-alt text-primary"></i> Live Collector Map</div>
+            <span class="live-badge"><span class="live-dot"></span> Updating every 5s</span>
+          </div>
+
+          <!-- Map -->
+          <div class="map-area" id="live-map">
+            <div class="map-grid"></div>
+            <!-- Roads -->
+            <div class="road h" style="top:25%;"></div>
+            <div class="road h" style="top:55%;"></div>
+            <div class="road h" style="top:80%;"></div>
+            <div class="road v" style="left:20%;"></div>
+            <div class="road v" style="left:55%;"></div>
+            <div class="road v" style="left:80%;"></div>
+            <!-- Map label -->
+            <div style="position:absolute;bottom:.5rem;left:.75rem;font-size:.7rem;color:var(--text-muted);background:rgba(255,255,255,.8);padding:.2rem .5rem;border-radius:4px;">
+              📍 Jaipur, Rajasthan — Simulated Live View
+            </div>
+          </div>
+
+          <!-- Legend -->
+          <div class="d-flex gap-3 mt-2" style="font-size:.78rem;flex-wrap:wrap;">
+            <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--green-600);margin-right:4px;"></span>Collector (Moving)</span>
+            <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f59e0b;margin-right:4px;"></span>Pending Pickup</span>
+            <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#22c55e;margin-right:4px;"></span>Completed Stop</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4">
+        <!-- Active Requests -->
+        <div class="eco-card mb-3">
+          <div class="eco-card-title"><i class="fas fa-truck text-primary"></i> Active Pickups</div>
+          <div style="display:flex;flex-direction:column;gap:.5rem;" id="active-requests-list">
+            <div class="text-center py-3"><div class="eco-spinner"></div></div>
+          </div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="eco-card">
+          <div class="eco-card-title"><i class="fas fa-timeline text-primary"></i> Status Timeline</div>
+          <div class="status-timeline" id="status-timeline">
+            <div class="timeline-step">
+              <div class="tline-icon">
+                <div class="tline-circle" style="background:var(--green-100);color:var(--green-700);">✅</div>
+                <div class="tline-bar" style="background:var(--green-200);"></div>
+              </div>
+              <div class="tline-content">
+                <div class="tline-title">Request Submitted</div>
+                <div class="tline-time">Waiting for confirmation</div>
+              </div>
+            </div>
+            <div class="timeline-step">
+              <div class="tline-icon">
+                <div class="tline-circle" style="background:#dbeafe;color:#2563eb;">📋</div>
+                <div class="tline-bar" style="background:var(--border);"></div>
+              </div>
+              <div class="tline-content">
+                <div class="tline-title">Collector Assigned</div>
+                <div class="tline-time">Pending assignment</div>
+              </div>
+            </div>
+            <div class="timeline-step">
+              <div class="tline-icon">
+                <div class="tline-circle" style="background:#ede9fe;color:#7c3aed;">🚛</div>
+                <div class="tline-bar" style="background:var(--border);"></div>
+              </div>
+              <div class="tline-content">
+                <div class="tline-title">En Route to Pickup</div>
+                <div class="tline-time">Not started yet</div>
+              </div>
+            </div>
+            <div class="timeline-step">
+              <div class="tline-icon">
+                <div class="tline-circle" style="background:var(--green-50);color:var(--green-600);">🏠</div>
+                <div class="tline-bar" style="background:var(--border);"></div>
+              </div>
+              <div class="tline-content">
+                <div class="tline-title">Arrived at Location</div>
+                <div class="tline-time">Awaiting</div>
+              </div>
+            </div>
+            <div class="timeline-step">
+              <div class="tline-icon">
+                <div class="tline-circle" style="background:#dcfce7;color:#166534;">🎉</div>
+              </div>
+              <div class="tline-content">
+                <div class="tline-title">Pickup Completed</div>
+                <div class="tline-time">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main-content -->
+
+<!-- Notification Modal -->
+<div class="modal fade" id="notifModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-scrollable"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title"><i class="fas fa-bell me-2"></i>Notifications</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body" id="notif-body"></div>
+  </div></div>
+</div>
+
+<div id="toast-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/main.js"></script><script src="/js/layout.js"></script>
+<script>
+if (!Auth.isLoggedIn()) window.location.href = '/pages/login.html';
+const currentUser = Auth.getUser();
+buildLayout('smart');
+
+// ── Panel switcher ──────────────────────────────────────────
+function switchFeature(name, btn) {
+  document.querySelectorAll('.ftab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.fpanel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(`panel-${name}`).classList.add('active');
+  if (name === 'impact') loadImpact();
+  if (name === 'facts')  renderFacts();
+  if (name === 'track')  initTracking();
+}
+
+// ═══════════════════════════════════════════════════════════
+// 1. AI CHAT — via EcoServe backend proxy
+// ═══════════════════════════════════════════════════════════
+const chatHistory = [];
+
+async function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  appendMsg(text, 'user');
+  chatHistory.push({ role: 'user', content: text });
+  showTyping();
+  try {
+    const data = await apiRequest('/ai/chat', 'POST', { messages: chatHistory });
+    removeTyping();
+    const reply = data?.reply || 'Sorry, I could not get a response. Please try again.';
+    appendMsg(reply, 'bot');
+    chatHistory.push({ role: 'assistant', content: reply });
+  } catch (err) {
+    removeTyping();
+    appendMsg('⚠️ Connection error. Make sure the server is running and try again.', 'bot');
+  }
+}
+
+function appendMsg(text, role) {
+  const win = document.getElementById('chat-window');
+  const initials = currentUser.full_name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  div.innerHTML = `
+    <div class="avatar ${role}">${role==='bot'?'🌿':initials}</div>
+    <div class="bubble ${role}">${text.replace(/\n/g,'<br>')}</div>`;
+  win.appendChild(div);
+  win.scrollTop = win.scrollHeight;
+}
+
+function showTyping() {
+  const win = document.getElementById('chat-window');
+  const div = document.createElement('div');
+  div.className = 'msg'; div.id = 'typing-bubble';
+  div.innerHTML = `<div class="avatar bot">🌿</div>
+    <div class="bubble bot"><div class="typing-indicator"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>`;
+  win.appendChild(div); win.scrollTop = win.scrollHeight;
+}
+function removeTyping() { document.getElementById('typing-bubble')?.remove(); }
+function sendQuick(el) { document.getElementById('chat-input').value = el.textContent.replace(/^[^\s]+\s/,''); sendMessage(); }
+
+// ═══════════════════════════════════════════════════════════
+// 2. ECO FACTS
+// ═══════════════════════════════════════════════════════════
+const ECO_FACTS = [
+  { number:'2.01B', text:'Tonnes of municipal solid waste generated globally every year — enough to fill 800,000 Olympic swimming pools.', category:'🌍 Global Waste', source:'World Bank, 2022', emoji:'🗑️' },
+  { number:'91%', text:'Of all plastic ever produced has NEVER been recycled. Only 9% has been recycled, 12% incinerated, 79% sent to landfill.', category:'♻️ Plastics', source:'Science Advances, 2017', emoji:'🧴' },
+  { number:'500+', text:'Years it takes for a plastic bottle to decompose in a landfill. Yet Indians use 16 billion plastic bags every year.', category:'♻️ Plastics', source:'CPCB India', emoji:'🍶' },
+  { number:'40%', text:'Of all food produced globally is wasted — that\'s 1.3 billion tonnes of food per year while 828 million people go hungry.', category:'🌿 Food Waste', source:'FAO, 2022', emoji:'🥗' },
+  { number:'3.5kg', text:'Of CO₂ emissions are prevented for every kg of aluminium recycled instead of smelted from raw bauxite ore.', category:'🔄 Recycling Impact', source:'Aluminium Association', emoji:'🥫' },
+  { number:'70%', text:'Less energy is used to recycle paper compared to making it from raw wood. Recycling 1 tonne of paper saves 17 trees.', category:'📄 Paper', source:'EPA', emoji:'📰' },
+  { number:'₹25,000Cr', text:'Worth of recyclable material is lost to landfills in India annually due to poor waste segregation at source.', category:'🇮🇳 India Stats', source:'ASSOCHAM India', emoji:'🏭' },
+  { number:'62MT', text:'Of waste is generated in India annually. Only 20% is processed. The rest goes to overflowing landfills.', category:'🇮🇳 India Stats', source:'MoEF India, 2023', emoji:'📊' },
+  { number:'1000yrs', text:'Time for a glass bottle to decompose naturally. Yet glass is 100% recyclable and can be recycled endlessly without quality loss.', category:'🔬 Glass', source:'Glass Packaging Institute', emoji:'🍾' },
+  { number:'50kg', text:'Of e-waste is generated per person per year globally. India is the 3rd largest e-waste producer at 3.2 million tonnes.', category:'💻 E-Waste', source:'Global E-Waste Monitor 2024', emoji:'📱' },
+  { number:'30%', text:'Reduction in greenhouse gas emissions is possible if the world simply stops sending food to landfill and composts instead.', category:'🌿 Food Waste', source:'Project Drawdown', emoji:'🌡️' },
+  { number:'13min', text:'Is how often a garbage truck collects waste in Mumbai — yet segregation at source remains below 30% in most Indian cities.', category:'🇮🇳 India Stats', source:'BMC Report, 2023', emoji:'🚛' }
+];
+
+let currentFact = 0;
+const categoryData = [
+  { icon:'♻️', name:'Plastic Waste', fact:'Only 9% of all plastic ever made has been recycled. Rest is in landfills or oceans.', color:'#3b82f6' },
+  { icon:'🌿', name:'Organic / Food', fact:'Food waste in landfills produces methane — 25× more potent than CO₂ as a greenhouse gas.', color:'#22c55e' },
+  { icon:'💻', name:'E-Waste', fact:'One tonne of e-waste contains more gold than 17 tonnes of gold ore. It\'s urban mining!', color:'#8b5cf6' },
+  { icon:'☣️', name:'Hazardous', fact:'Improper disposal of batteries leaches lead and cadmium into groundwater for 50+ years.', color:'#ef4444' },
+  { icon:'📄', name:'Paper & Cardboard', fact:'Recycling 1 tonne of cardboard saves 9 cubic yards of landfill space and 46 gallons of oil.', color:'#f59e0b' },
+  { icon:'🍶', name:'Glass & Metal', fact:'Steel is the world\'s most recycled material. A recycled steel can saves enough energy to power a TV for 3 hours.', color:'#6b7280' }
+];
+
+function renderFacts() {
+  showFact(currentFact);
+  // Grid of mini facts
+  const grid = document.getElementById('fact-grid');
+  grid.innerHTML = ECO_FACTS.slice(0,6).map((f,i) => `
+    <div class="col-6">
+      <div class="eco-card" style="padding:1rem;cursor:pointer;border:1.5px solid ${i===currentFact?'var(--green-500)':'var(--border)'};" onclick="showFact(${i})">
+        <div style="font-size:1.4rem;">${f.emoji}</div>
+        <div style="font-family:var(--font-display);font-weight:800;font-size:1.1rem;color:var(--green-700);">${f.number}</div>
+        <div style="font-size:.72rem;color:var(--text-muted);margin-top:.2rem;line-height:1.4;">${f.text.slice(0,60)}…</div>
+      </div>
+    </div>`).join('');
+
+  // Category cards
+  document.getElementById('category-facts').innerHTML = categoryData.map(c => `
+    <div class="col-md-4 col-sm-6">
+      <div style="padding:1.1rem;border-radius:var(--radius-sm);background:var(--white);border:1.5px solid var(--border);">
+        <div style="font-size:1.6rem;">${c.icon}</div>
+        <div style="font-family:var(--font-display);font-weight:700;font-size:.9rem;margin:.3rem 0;">${c.name}</div>
+        <div style="font-size:.8rem;color:var(--text-muted);line-height:1.5;">${c.fact}</div>
+      </div>
+    </div>`).join('');
+}
+
+function showFact(idx) {
+  currentFact = idx;
+  const f = ECO_FACTS[idx];
+  document.getElementById('fact-category').textContent = f.category;
+  document.getElementById('fact-number').textContent   = f.number;
+  document.getElementById('fact-text').textContent     = f.text;
+  document.getElementById('fact-source').textContent   = '📚 Source: ' + f.source;
+  document.getElementById('fact-counter').textContent  = `${idx+1} / ${ECO_FACTS.length}`;
+  document.getElementById('main-fact-card').style.animation = 'none';
+  requestAnimationFrame(() => { document.getElementById('main-fact-card').style.animation = ''; });
+}
+function nextFact() { showFact((currentFact+1) % ECO_FACTS.length); renderFacts(); }
+function prevFact() { showFact((currentFact-1+ECO_FACTS.length) % ECO_FACTS.length); renderFacts(); }
+
+// Sidebar random fact
+const sidebarFacts = [
+  'Recycling one glass bottle saves enough energy to power a computer for 25 minutes.',
+  'A single recycled aluminium can saves enough electricity to run a TV for 3 hours.',
+  'Paper can be recycled up to 7 times before fibres become too short.',
+  'Composting food waste reduces methane emissions from landfills by up to 50%.',
+  'India recovers only 15% of its electronic waste — rest ends up in informal dumpsites.',
+  'Every tonne of recycled paper saves 682 gallons of oil and 7,000 gallons of water.'
+];
+let sfIdx = 0;
+function rotateSidebarFact() { sfIdx = (sfIdx+1)%sidebarFacts.length; document.getElementById('sidebar-fact').textContent = sidebarFacts[sfIdx]; }
+document.getElementById('sidebar-fact').textContent = sidebarFacts[0];
+
+// ═══════════════════════════════════════════════════════════
+// 3. ENVIRONMENTAL IMPACT
+// ═══════════════════════════════════════════════════════════
+async function loadImpact() {
+  const role = currentUser.role;
+  let completed = 0, totalKg = 0;
+
+  if (role === 'citizen') {
+    const d = await apiRequest('/requests/my');
+    if (d?.success) {
+      completed = d.requests.filter(r => r.status === 'completed').length;
+      totalKg   = completed * 12; // avg 12kg per pickup estimate
+    }
+  } else if (role === 'collector') {
+    const d = await apiRequest('/reports/my');
+    if (d?.success) {
+      completed = d.reports.length;
+      totalKg   = d.reports.reduce((s,r) => s+parseFloat(r.total_weight_kg||0), 0);
+    }
+  } else {
+    const d = await apiRequest('/admin/stats');
+    if (d?.success) {
+      completed = d.stats.completed_requests || 0;
+      totalKg   = parseFloat(d.stats.total_waste_kg || 0);
+    }
+  }
+
+  const co2Saved   = parseFloat((totalKg * 0.5).toFixed(1));
+  const waterSaved = Math.round(totalKg * 8.5);
+  const trees      = Math.max(1, Math.round(completed * 0.8));
+  const meals      = Math.round(totalKg * 2.1);
+  const recycledPct= Math.min(98, 45 + Math.min(completed, 20) * 2);
+  const ecoScore   = Math.min(999, Math.round(completed * 18 + totalKg * 0.9));
+
+  document.getElementById('eco-score').textContent      = ecoScore;
+  document.getElementById('imp-requests').textContent   = completed;
+  document.getElementById('imp-kg').textContent         = totalKg.toFixed(1) + ' kg';
+  document.getElementById('imp-trees').textContent      = trees;
+  document.getElementById('imp-meals').textContent      = meals;
+
+  // Animate rings
+  setTimeout(() => animateRing('ring-recycled', recycledPct, 100),  200);
+  setTimeout(() => animateRing('ring-co2',      Math.min(co2Saved, 200), 200), 400);
+  setTimeout(() => animateRing('ring-water',    Math.min(waterSaved, 500), 500), 600);
+
+  document.getElementById('ring-val-recycled').textContent = recycledPct + '%';
+  document.getElementById('ring-val-co2').textContent      = co2Saved;
+  document.getElementById('ring-val-water').textContent    = waterSaved;
+
+  // Trees visual
+  const treeRow = document.getElementById('tree-row');
+  treeRow.innerHTML = '';
+  for (let i=0;i<Math.min(trees,40);i++) {
+    const el = document.createElement('span');
+    el.className = 'tree-icon';
+    el.textContent = '🌳';
+    el.style.animationDelay = (i*0.05)+'s';
+    treeRow.appendChild(el);
+  }
+  document.getElementById('tree-label').textContent = trees > 40
+    ? `+${trees-40} more trees 🌳` : `${trees} tree${trees!==1?'s':''} equivalent from your ${completed} completed pickup${completed!==1?'s':''}`;
+
+  // Tips
+  const tips = [
+    { icon:'♻️', tip:'Separate dry and wet waste at home to boost recycling rates by 60%.', color:'#dcfce7' },
+    { icon:'🧴', tip:'Rinse plastic containers before placing in recyclables — contamination ruins entire batches.', color:'#dbeafe' },
+    { icon:'🌿', tip:'Composting kitchen scraps at home reduces your organic waste footprint by up to 30%.', color:'#d1fae5' },
+    { icon:'🔋', tip:'Never throw batteries in general waste — they leach toxic metals into soil for decades.', color:'#fee2e2' },
+    { icon:'📱', tip:'Donate working old electronics before choosing e-waste disposal — extend product life.', color:'#ede9fe' },
+    { icon:'🛍️', tip:'Carry reusable bags. India uses 16 billion plastic bags yearly — most end up in water bodies.', color:'#fef3c7' }
+  ];
+  document.getElementById('eco-tips-row').innerHTML = tips.map(t => `
+    <div class="col-md-4 col-sm-6">
+      <div style="background:${t.color};border-radius:var(--radius-sm);padding:.85rem;display:flex;gap:.6rem;align-items:flex-start;">
+        <span style="font-size:1.2rem;flex-shrink:0;">${t.icon}</span>
+        <span style="font-size:.82rem;color:var(--text);line-height:1.5;">${t.tip}</span>
+      </div>
+    </div>`).join('');
+}
+
+function animateRing(id, value, maxVal) {
+  const circumference = 345.4;
+  const pct = Math.min(value/maxVal, 1);
+  const offset = circumference - pct * circumference;
+  document.getElementById(id).style.strokeDashoffset = offset;
+}
+
+// ═══════════════════════════════════════════════════════════
+// 4. LIVE TRACKING
+// ═══════════════════════════════════════════════════════════
+const SIMULATED_ROUTES = [
+  { name:'Ravi Kumar', zone:'North Zone', status:'in_progress', route:[{x:20,y:55},{x:35,y:55},{x:55,y:55},{x:55,y:25}], color:'#22c55e', emoji:'🚛' },
+  { name:'Priya Singh', zone:'South Zone', status:'assigned',   route:[{x:80,y:25},{x:80,y:55},{x:55,y:55}], color:'#3b82f6', emoji:'🚚' },
+  { name:'Amit Sharma', zone:'East Zone', status:'scheduled',   route:[{x:20,y:25},{x:55,y:25},{x:80,y:25}], color:'#8b5cf6', emoji:'🛻' }
+];
+
+const PICKUP_PINS = [
+  { x:30, y:30, status:'completed', label:'Stop 1' },
+  { x:48, y:58, status:'pending',   label:'Stop 2' },
+  { x:68, y:38, status:'pending',   label:'Stop 3' },
+  { x:82, y:72, status:'pending',   label:'Stop 4' },
+  { x:15, y:70, status:'completed', label:'Stop 5' }
+];
+
+let truckPositions  = {};
+let trackInterval   = null;
+let routeProgress   = {};
+
+function initTracking() {
+  if (trackInterval) clearInterval(trackInterval);
+  renderMap();
+  renderActiveList();
+  trackInterval = setInterval(moveTrucks, 4000);
+}
+
+function renderMap() {
+  const map = document.getElementById('live-map');
+  // Remove old markers
+  map.querySelectorAll('.truck-marker,.pin-marker').forEach(el => el.remove());
+
+  // Place pickup pins
+  PICKUP_PINS.forEach((p, i) => {
+    const pin = document.createElement('div');
+    pin.className = 'pin-marker';
+    pin.style.left = p.x+'%'; pin.style.top = p.y+'%';
+    pin.innerHTML = `
+      <div class="pin-dot" style="background:${p.status==='completed'?'#22c55e':'#f59e0b'};">
+        <span>${p.status==='completed'?'✅':'📦'}</span>
+      </div>
+      <div class="pin-label">${p.label}</div>`;
+    map.appendChild(pin);
+  });
+
+  // Place trucks
+  SIMULATED_ROUTES.forEach((t, i) => {
+    if (!routeProgress[i]) routeProgress[i] = 0;
+    const pos = t.route[Math.min(routeProgress[i], t.route.length-1)];
+    const truck = document.createElement('div');
+    truck.className = 'truck-marker';
+    truck.id = `truck-${i}`;
+    truck.style.left = pos.x+'%'; truck.style.top = pos.y+'%';
+    truck.style.background = t.color;
+    truck.textContent = t.emoji;
+    truck.title = `${t.name} — ${t.zone}`;
+    map.appendChild(truck);
+    truckPositions[i] = pos;
+  });
+}
+
+function moveTrucks() {
+  SIMULATED_ROUTES.forEach((t, i) => {
+    if (t.status === 'in_progress') {
+      routeProgress[i] = (routeProgress[i]+1) % t.route.length;
+      const pos = t.route[routeProgress[i]];
+      const el = document.getElementById(`truck-${i}`);
+      if (el) { el.style.left = pos.x+'%'; el.style.top = pos.y+'%'; }
+    }
+  });
+}
+
+function renderActiveList() {
+  const list = document.getElementById('active-requests-list');
+  list.innerHTML = SIMULATED_ROUTES.map((t, i) => `
+    <div class="track-card ${i===0?'active':''}" onclick="focusTruck(${i})">
+      <div class="track-dot" style="background:${t.color};"></div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:var(--font-display);font-weight:700;font-size:.85rem;">${t.name}</div>
+        <div style="font-size:.75rem;color:var(--text-muted);">${t.zone}</div>
+      </div>
+      ${statusBadge(t.status)}
+    </div>`).join('');
+}
+
+function focusTruck(i) {
+  document.querySelectorAll('.track-card').forEach((c,j) => c.classList.toggle('active', i===j));
+  showToast(`Tracking ${SIMULATED_ROUTES[i].name} — ${SIMULATED_ROUTES[i].zone}`, 'info', 2000);
+}
+
+// Init on load
+renderFacts();
+loadImpact();
+setTimeout(rotateSidebarFact, 5000);
+</script>
+</body>
+</html>

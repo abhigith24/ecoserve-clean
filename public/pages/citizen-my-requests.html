@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Requests – EcoServe</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+  <link href="/css/style.css" rel="stylesheet"/>
+</head>
+<body>
+<nav class="eco-navbar" id="app-navbar"></nav>
+<div class="sidebar" id="app-sidebar"></div>
+<div class="main-content">
+  <div class="page-header">
+    <div><h1 class="page-title">My Requests</h1><p class="page-subtitle">Track all your waste pickup requests</p></div>
+    <a href="citizen-request.html" class="btn-eco-primary"><i class="fas fa-plus"></i> New Request</a>
+  </div>
+
+  <div class="row g-3" id="requests-grid">
+    <div class="col-12 text-center py-5"><div class="eco-spinner"></div></div>
+  </div>
+</div>
+
+<!-- Cancel Confirm Modal -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+  <div class="modal-dialog modal-sm"><div class="modal-content">
+    <div class="modal-header" style="background:#ef4444;"><h5 class="modal-title" style="color:#fff;"><i class="fas fa-ban me-2"></i>Cancel Request</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter:invert(1);"></button></div>
+    <div class="modal-body"><p>Are you sure you want to cancel request <strong id="cancel-req-id"></strong>? This cannot be undone.</p></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Keep It</button>
+      <button class="btn-eco-danger" id="confirm-cancel-btn" onclick="confirmCancel()"><i class="fas fa-ban"></i> Cancel Request</button>
+    </div>
+  </div></div>
+</div>
+
+<div class="modal fade" id="notifModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-scrollable"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Notifications</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body" id="notif-body"></div>
+  </div></div>
+</div>
+
+<div id="toast-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/main.js"></script><script src="/js/layout.js"></script>
+<script>
+  if (!requireAuth('citizen')) {}
+  buildLayout('my-requests');
+  let cancelId = null;
+
+  const progressMap = { pending:10, assigned:40, in_progress:70, completed:100, cancelled:0 };
+  const progressColor = { pending:'#f59e0b', assigned:'#3b82f6', in_progress:'#8b5cf6', completed:'var(--green-500)', cancelled:'#ef4444' };
+
+  async function loadMyRequests() {
+    const data = await apiRequest('/requests/my');
+    const grid = document.getElementById('requests-grid');
+    if (!data?.success || !data.requests.length) {
+      grid.innerHTML = `<div class="col-12"><div class="empty-state">
+        <div class="empty-icon">🌱</div><h4>No Requests Yet</h4>
+        <p>You haven't raised any pickup requests.</p>
+        <a href="citizen-request.html" class="btn-eco-primary mt-3"><i class="fas fa-plus"></i> Make Your First Request</a>
+      </div></div>`;
+      return;
+    }
+    grid.innerHTML = data.requests.map(r => {
+      const pct = progressMap[r.status] || 0;
+      const canCancel = ['pending'].includes(r.status);
+      return `
+      <div class="col-md-6 col-lg-4">
+        <div class="eco-card h-100">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <span style="font-family:var(--font-display);font-weight:800;font-size:1rem;color:var(--green-700);">#${r.id}</span>
+            ${statusBadge(r.status)}
+          </div>
+          <div class="mb-2">${wasteTypeBadge(r.waste_type)}</div>
+          <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:.5rem;"><i class="fas fa-map-marker-alt me-1"></i>${r.address.slice(0,60)}${r.address.length>60?'…':''}</p>
+          <div class="d-flex gap-3 mb-3" style="font-size:.8rem;color:var(--text-muted);">
+            <span><i class="fas fa-calendar me-1"></i>${formatDate(r.preferred_date)}</span>
+            ${r.quantity_kg?`<span><i class="fas fa-weight-hanging me-1"></i>${r.quantity_kg} kg</span>`:''}
+          </div>
+
+          <!-- Progress Bar -->
+          <div style="margin-bottom:.5rem;">
+            <div style="background:var(--border);border-radius:10px;height:6px;overflow:hidden;">
+              <div style="background:${progressColor[r.status]||'var(--green-500)'};height:6px;border-radius:10px;width:${pct}%;transition:width .6s ease;"></div>
+            </div>
+            <div style="font-size:.72rem;color:var(--text-muted);margin-top:.25rem;">${pct}% complete</div>
+          </div>
+
+          ${r.collector_name ? `<div style="font-size:.8rem;margin-bottom:.5rem;"><i class="fas fa-user-check me-1" style="color:var(--green-600);"></i><b>Collector:</b> ${r.collector_name}</div>` : ''}
+          ${r.notes ? `<div class="eco-alert eco-alert-info" style="font-size:.78rem;margin-bottom:.5rem;"><i class="fas fa-note-sticky"></i>${r.notes}</div>` : ''}
+          <div style="font-size:.72rem;color:var(--gray-400);">Submitted ${formatDateTime(r.created_at)}</div>
+
+          ${canCancel ? `
+          <button class="btn-eco-danger w-100 mt-3" style="font-size:.8rem;" onclick="openCancel(${r.id})">
+            <i class="fas fa-ban"></i> Cancel Request
+          </button>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function openCancel(id) {
+    cancelId = id;
+    document.getElementById('cancel-req-id').textContent = `#${id}`;
+    new bootstrap.Modal(document.getElementById('cancelModal')).show();
+  }
+
+  async function confirmCancel() {
+    const btn = document.getElementById('confirm-cancel-btn');
+    setLoading(btn, true);
+    const data = await apiRequest(`/requests/${cancelId}`, 'DELETE');
+    setLoading(btn, false);
+    bootstrap.Modal.getInstance(document.getElementById('cancelModal')).hide();
+    if (data?.success) { showToast('Request cancelled.', 'warning'); loadMyRequests(); }
+    else showToast(data?.message || 'Failed to cancel.', 'error');
+  }
+
+  loadMyRequests();
+</script>
+</body>
+</html>

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Dashboard – EcoServe</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" rel="stylesheet"/>
+  <link href="/css/style.css" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="eco-navbar" id="app-navbar"></nav>
+
+<!-- Sidebar -->
+<div class="sidebar" id="app-sidebar"></div>
+
+<!-- Main Content -->
+<div class="main-content">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Admin Dashboard</h1>
+      <p class="page-subtitle">Overview of waste management operations</p>
+    </div>
+    <span id="today-date" class="text-muted" style="font-size:.85rem;"></span>
+  </div>
+
+  <!-- Stat Cards -->
+  <div class="row g-3 mb-4" id="stats-row">
+    <div class="col-12 text-center py-5"><div class="eco-spinner"></div></div>
+  </div>
+
+  <!-- Charts Row -->
+  <div class="row g-3 mb-4">
+    <div class="col-lg-8">
+      <div class="eco-card">
+        <div class="eco-card-title"><i class="fas fa-chart-line text-primary"></i> Monthly Pickup Requests (This Year)</div>
+        <canvas id="monthlyChart" height="100"></canvas>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="eco-card">
+        <div class="eco-card-title"><i class="fas fa-chart-pie text-primary"></i> Waste by Type</div>
+        <canvas id="wasteTypeChart" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Requests Table -->
+  <div class="eco-card">
+    <div class="eco-card-title"><i class="fas fa-inbox text-primary"></i> Recent Pickup Requests
+      <a href="admin-requests.html" class="ms-auto btn-eco-outline" style="font-size:.78rem;padding:.3rem .9rem;">View All</a>
+    </div>
+    <div class="table-responsive">
+      <table class="eco-table" id="recent-table">
+        <thead>
+          <tr><th>#</th><th>Citizen</th><th>Waste Type</th><th>Date</th><th>Zone</th><th>Status</th><th>Action</th></tr>
+        </thead>
+        <tbody id="recent-tbody">
+          <tr><td colspan="7" class="text-center py-4"><div class="eco-spinner"></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Notification Modal -->
+<div class="modal fade" id="notifModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title"><i class="fas fa-bell me-2"></i>Notifications</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body" id="notif-body"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="/js/main.js"></script>
+<script src="/js/layout.js"></script>
+<script>
+  if (!requireAuth('admin')) {}
+  buildLayout('dashboard');
+  document.getElementById('today-date').textContent = new Date().toLocaleDateString('en-IN',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+
+  async function loadDashboard() {
+    const data = await apiRequest('/admin/stats');
+    if (!data || !data.success) { showToast('Failed to load stats','error'); return; }
+    const s = data.stats;
+
+    document.getElementById('stats-row').innerHTML = `
+      <div class="col-6 col-lg-2">
+        <div class="stat-card stat-green">
+          <div class="stat-icon"><i class="fas fa-user-group"></i></div>
+          <div><div class="stat-value">${s.total_citizens}</div><div class="stat-label">Citizens</div></div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-2">
+        <div class="stat-card stat-blue">
+          <div class="stat-icon"><i class="fas fa-users"></i></div>
+          <div><div class="stat-value">${s.total_collectors}</div><div class="stat-label">Collectors</div></div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="stat-card stat-amber">
+          <div class="stat-icon"><i class="fas fa-hourglass-half"></i></div>
+          <div><div class="stat-value">${s.pending_requests}</div><div class="stat-label">Pending Requests</div></div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="stat-card stat-green">
+          <div class="stat-icon"><i class="fas fa-circle-check"></i></div>
+          <div><div class="stat-value">${s.completed_requests}</div><div class="stat-label">Completed</div></div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-2">
+        <div class="stat-card stat-red">
+          <div class="stat-icon"><i class="fas fa-triangle-exclamation"></i></div>
+          <div><div class="stat-value">${s.open_complaints}</div><div class="stat-label">Open Complaints</div></div>
+        </div>
+      </div>`;
+
+    // Monthly chart
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const monthlyData = Array(12).fill(0);
+    s.monthly_requests.forEach(m => { monthlyData[m.month - 1] = m.requests; });
+
+    new Chart(document.getElementById('monthlyChart'), {
+      type: 'bar',
+      data: {
+        labels: months,
+        datasets: [{ label: 'Requests', data: monthlyData,
+          backgroundColor: 'rgba(34,136,63,.75)', borderRadius: 6,
+          borderColor: 'rgba(34,136,63,1)', borderWidth: 1.5 }]
+      },
+      options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+    });
+
+    // Waste type doughnut
+    const wtLabels = s.waste_by_type.map(w => w.waste_type);
+    const wtData   = s.waste_by_type.map(w => w.count);
+    const wtColors = ['#9aaba2','#3b82f6','#ef4444','#22c55e','#8b5cf6'];
+
+    new Chart(document.getElementById('wasteTypeChart'), {
+      type: 'doughnut',
+      data: { labels: wtLabels, datasets: [{ data: wtData, backgroundColor: wtColors, borderWidth: 2 }] },
+      options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 12 } } } } }
+    });
+  }
+
+  async function loadRecentRequests() {
+    const data = await apiRequest('/requests/all?limit=8');
+    const tbody = document.getElementById('recent-tbody');
+    if (!data || !data.success || !data.requests.length) {
+      tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">📭</div><p>No requests yet.</p></div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.requests.map(r => `
+      <tr>
+        <td><span style="font-family:var(--font-display);font-weight:700;color:var(--green-700);">#${r.id}</span></td>
+        <td><div style="font-weight:600;">${r.citizen_name}</div><div style="font-size:.75rem;color:var(--text-muted);">${r.citizen_phone||''}</div></td>
+        <td>${wasteTypeBadge(r.waste_type)}</td>
+        <td>${formatDate(r.preferred_date)}</td>
+        <td>${r.zone||'—'}</td>
+        <td>${statusBadge(r.status)}</td>
+        <td><a href="admin-requests.html" class="btn-eco-outline" style="font-size:.75rem;padding:.25rem .7rem;">Manage</a></td>
+      </tr>`).join('');
+  }
+
+  loadDashboard();
+  loadRecentRequests();
+</script>
+</body>
+</html>

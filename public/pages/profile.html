@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Profile – EcoServe</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+  <link href="/css/style.css" rel="stylesheet"/>
+  <style>
+    .profile-avatar {
+      width: 90px; height: 90px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--green-500), var(--green-700));
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-display); font-weight: 800; color: #fff;
+      font-size: 2rem; margin: 0 auto 1rem; box-shadow: 0 6px 20px rgba(34,136,63,.3);
+    }
+    .role-badge {
+      display: inline-block; padding: .3rem 1rem; border-radius: 30px;
+      font-family: var(--font-display); font-size: .78rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .08em;
+    }
+    .tab-btn {
+      padding: .55rem 1.4rem; border: none; border-radius: var(--radius-sm);
+      background: transparent; font-family: var(--font-display); font-weight: 700;
+      font-size: .85rem; color: var(--text-muted); cursor: pointer; transition: all var(--transition);
+    }
+    .tab-btn.active { background: var(--green-600); color: #fff; }
+    .tab-panel { display: none; } .tab-panel.active { display: block; }
+  </style>
+</head>
+<body>
+<nav class="eco-navbar" id="app-navbar"></nav>
+<div class="sidebar" id="app-sidebar"></div>
+<div class="main-content">
+
+  <!-- Profile Header Card -->
+  <div class="eco-card mb-4" style="text-align:center; background: linear-gradient(135deg, var(--green-900), var(--green-700)); color: #fff; border: none;">
+    <div class="profile-avatar" id="avatar-initials">??</div>
+    <h3 id="profile-name" style="font-family:var(--font-display);color:#fff;margin-bottom:.25rem;">—</h3>
+    <span id="profile-role" class="role-badge" style="background:rgba(255,255,255,.15);color:var(--green-300);">—</span>
+    <div id="profile-meta" class="mt-2" style="color:rgba(255,255,255,.65);font-size:.85rem;"></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="d-flex gap-2 mb-4" style="background:var(--white);border-radius:var(--radius);padding:.5rem;border:1px solid var(--border);">
+    <button class="tab-btn active" onclick="switchTab('edit')"><i class="fas fa-user-edit me-1"></i>Edit Profile</button>
+    <button class="tab-btn" onclick="switchTab('password')"><i class="fas fa-lock me-1"></i>Change Password</button>
+    <button class="tab-btn" onclick="switchTab('activity')"><i class="fas fa-history me-1"></i>Activity</button>
+  </div>
+
+  <!-- Tab: Edit Profile -->
+  <div class="tab-panel active" id="tab-edit">
+    <div class="eco-card">
+      <div class="eco-card-title"><i class="fas fa-user-circle text-primary"></i> Personal Information</div>
+      <div id="profile-alert"></div>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Full Name</label>
+          <input type="text" class="form-control" id="edit-name" placeholder="Your full name"/>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Email Address</label>
+          <input type="email" class="form-control" id="edit-email" disabled style="background:var(--gray-100);cursor:not-allowed;"/>
+          <small class="text-muted">Email cannot be changed.</small>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Phone Number</label>
+          <input type="tel" class="form-control" id="edit-phone" placeholder="10-digit mobile number"/>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Zone</label>
+          <select class="form-select" id="edit-zone">
+            <option value="">Select Zone</option>
+            <option value="Central">Central Zone</option>
+            <option value="North">North Zone</option>
+            <option value="South">South Zone</option>
+            <option value="East">East Zone</option>
+            <option value="West">West Zone</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Ward No.</label>
+          <input type="text" class="form-control" id="edit-ward" placeholder="e.g. 04"/>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Address</label>
+          <textarea class="form-control" id="edit-address" rows="2" placeholder="House No, Street, Area"></textarea>
+        </div>
+        <div class="col-12">
+          <button class="btn-eco-primary" id="save-profile-btn" onclick="saveProfile()">
+            <i class="fas fa-save"></i> Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Change Password -->
+  <div class="tab-panel" id="tab-password">
+    <div class="eco-card">
+      <div class="eco-card-title"><i class="fas fa-lock text-primary"></i> Change Password</div>
+      <div id="pwd-alert"></div>
+      <div class="row g-3" style="max-width:500px;">
+        <div class="col-12">
+          <label class="form-label">Current Password</label>
+          <input type="password" class="form-control" id="current-pwd" placeholder="Enter current password"/>
+        </div>
+        <div class="col-12">
+          <label class="form-label">New Password</label>
+          <input type="password" class="form-control" id="new-pwd" placeholder="Minimum 6 characters"/>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Confirm New Password</label>
+          <input type="password" class="form-control" id="confirm-pwd" placeholder="Repeat new password"/>
+        </div>
+        <div class="col-12">
+          <button class="btn-eco-primary" id="change-pwd-btn" onclick="changePassword()">
+            <i class="fas fa-key"></i> Update Password
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Activity -->
+  <div class="tab-panel" id="tab-activity">
+    <div id="activity-content">
+      <div class="text-center py-5"><div class="eco-spinner"></div></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Notification Modal -->
+<div class="modal fade" id="notifModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-scrollable"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title"><i class="fas fa-bell me-2"></i>Notifications</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body" id="notif-body"></div>
+  </div></div>
+</div>
+
+<div id="toast-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/main.js"></script><script src="/js/layout.js"></script>
+<script>
+  if (!Auth.isLoggedIn()) window.location.href = '/pages/login.html';
+  const user = Auth.getUser();
+  buildLayout('profile');
+
+  function switchTab(name) {
+    document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById(`tab-${name}`).classList.add('active');
+    event.currentTarget.classList.add('active');
+    if (name === 'activity') loadActivity();
+  }
+
+  async function loadProfile() {
+    const data = await apiRequest('/auth/profile');
+    if (!data?.success) return;
+    const u = data.user;
+    const initials = u.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    document.getElementById('avatar-initials').textContent = initials;
+    document.getElementById('profile-name').textContent = u.full_name;
+    document.getElementById('profile-role').textContent = '🌿 ' + u.role.charAt(0).toUpperCase() + u.role.slice(1);
+    document.getElementById('profile-meta').innerHTML =
+      `<i class="fas fa-envelope me-1"></i>${u.email}` +
+      (u.phone ? ` &nbsp;·&nbsp; <i class="fas fa-phone me-1"></i>${u.phone}` : '') +
+      (u.zone  ? ` &nbsp;·&nbsp; <i class="fas fa-map-marker-alt me-1"></i>${u.zone}` : '') +
+      `<br><small style="opacity:.6;">Member since ${formatDate(u.created_at)}</small>`;
+
+    document.getElementById('edit-name').value    = u.full_name || '';
+    document.getElementById('edit-email').value   = u.email || '';
+    document.getElementById('edit-phone').value   = u.phone || '';
+    document.getElementById('edit-zone').value    = u.zone || '';
+    document.getElementById('edit-ward').value    = u.ward_no || '';
+    document.getElementById('edit-address').value = u.address || '';
+  }
+
+  async function saveProfile() {
+    const btn = document.getElementById('save-profile-btn');
+    const alertBox = document.getElementById('profile-alert');
+    alertBox.innerHTML = '';
+    setLoading(btn, true);
+    const data = await apiRequest('/auth/profile', 'PUT', {
+      full_name: document.getElementById('edit-name').value,
+      phone:     document.getElementById('edit-phone').value,
+      zone:      document.getElementById('edit-zone').value,
+      ward_no:   document.getElementById('edit-ward').value,
+      address:   document.getElementById('edit-address').value
+    });
+    setLoading(btn, false);
+    if (data?.success) {
+      alertBox.innerHTML = `<div class="eco-alert eco-alert-success mb-3"><i class="fas fa-check-circle"></i> Profile updated successfully!</div>`;
+      // Update cached user name
+      const cached = Auth.getUser();
+      cached.full_name = document.getElementById('edit-name').value;
+      localStorage.setItem('ecoserve_user', JSON.stringify(cached));
+      loadProfile();
+    } else {
+      alertBox.innerHTML = `<div class="eco-alert eco-alert-error mb-3"><i class="fas fa-exclamation-circle"></i> ${data?.message || 'Update failed.'}</div>`;
+    }
+  }
+
+  async function changePassword() {
+    const btn = document.getElementById('change-pwd-btn');
+    const alertBox = document.getElementById('pwd-alert');
+    alertBox.innerHTML = '';
+    const np = document.getElementById('new-pwd').value;
+    const cp = document.getElementById('confirm-pwd').value;
+    if (np !== cp) {
+      alertBox.innerHTML = `<div class="eco-alert eco-alert-error mb-3"><i class="fas fa-exclamation-circle"></i> Passwords do not match.</div>`;
+      return;
+    }
+    if (np.length < 6) {
+      alertBox.innerHTML = `<div class="eco-alert eco-alert-error mb-3"><i class="fas fa-exclamation-circle"></i> Password must be at least 6 characters.</div>`;
+      return;
+    }
+    setLoading(btn, true);
+    const data = await apiRequest('/auth/change-password', 'PUT', {
+      current_password: document.getElementById('current-pwd').value,
+      new_password: np
+    });
+    setLoading(btn, false);
+    if (data?.success) {
+      alertBox.innerHTML = `<div class="eco-alert eco-alert-success mb-3"><i class="fas fa-check-circle"></i> Password changed! Please login again.</div>`;
+      document.getElementById('current-pwd').value = '';
+      document.getElementById('new-pwd').value = '';
+      document.getElementById('confirm-pwd').value = '';
+      setTimeout(() => Auth.logout(), 2000);
+    } else {
+      alertBox.innerHTML = `<div class="eco-alert eco-alert-error mb-3"><i class="fas fa-exclamation-circle"></i> ${data?.message || 'Failed to change password.'}</div>`;
+    }
+  }
+
+  async function loadActivity() {
+    const box = document.getElementById('activity-content');
+    const role = user.role;
+
+    let html = '';
+
+    if (role === 'citizen') {
+      const [reqData, compData] = await Promise.all([
+        apiRequest('/requests/my'),
+        apiRequest('/complaints/my')
+      ]);
+      const reqs  = reqData?.requests  || [];
+      const comps = compData?.complaints || [];
+
+      html = `
+        <div class="row g-3 mb-4">
+          <div class="col-6 col-md-3"><div class="stat-card stat-green"><div class="stat-icon"><i class="fas fa-inbox"></i></div><div><div class="stat-value">${reqs.length}</div><div class="stat-label">Total Requests</div></div></div></div>
+          <div class="col-6 col-md-3"><div class="stat-card stat-amber"><div class="stat-icon"><i class="fas fa-hourglass-half"></i></div><div><div class="stat-value">${reqs.filter(r=>r.status==='pending').length}</div><div class="stat-label">Pending</div></div></div></div>
+          <div class="col-6 col-md-3"><div class="stat-card stat-blue"><div class="stat-icon"><i class="fas fa-check"></i></div><div><div class="stat-value">${reqs.filter(r=>r.status==='completed').length}</div><div class="stat-label">Completed</div></div></div></div>
+          <div class="col-6 col-md-3"><div class="stat-card stat-red"><div class="stat-icon"><i class="fas fa-triangle-exclamation"></i></div><div><div class="stat-value">${comps.length}</div><div class="stat-label">Complaints</div></div></div></div>
+        </div>
+        <div class="eco-card">
+          <div class="eco-card-title"><i class="fas fa-clock text-primary"></i> Recent Request History</div>
+          <div class="table-responsive">
+            <table class="eco-table">
+              <thead><tr><th>#</th><th>Type</th><th>Date</th><th>Status</th></tr></thead>
+              <tbody>
+                ${reqs.slice(0,10).map(r=>`<tr><td><b>#${r.id}</b></td><td>${wasteTypeBadge(r.waste_type)}</td><td>${formatDate(r.preferred_date)}</td><td>${statusBadge(r.status)}</td></tr>`).join('')||'<tr><td colspan="4" class="text-center text-muted py-3">No history yet.</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+        </div>`;
+
+    } else if (role === 'collector') {
+      const reqData = await apiRequest('/requests/assigned');
+      const schData = await apiRequest('/schedules/my');
+      const reqs    = reqData?.requests  || [];
+      const schs    = schData?.schedules || [];
+
+      html = `
+        <div class="row g-3 mb-4">
+          <div class="col-6 col-md-3"><div class="stat-card stat-blue"><div class="stat-icon"><i class="fas fa-truck"></i></div><div><div class="stat-value">${reqs.length}</div><div class="stat-label">Total Assigned</div></div></div></div>
+          <div class="col-6 col-md-3"><div class="stat-card stat-green"><div class="stat-icon"><i class="fas fa-check-circle"></i></div><div><div class="stat-value">${reqs.filter(r=>r.status==='completed').length}</div><div class="stat-label">Completed</div></div></div></div>
+          <div class="col-6 col-md-3"><div class="stat-card stat-amber"><div class="stat-icon"><i class="fas fa-calendar-days"></i></div><div><div class="stat-value">${schs.length}</div><div class="stat-label">Schedules</div></div></div></div>
+          <div class="col-6 col-md-3"><div class="stat-card stat-purple" style=""><div class="stat-icon" style="background:#ede9fe;color:#7c3aed;"><i class="fas fa-star"></i></div><div><div class="stat-value">${reqs.length>0?Math.round((reqs.filter(r=>r.status==='completed').length/reqs.length)*100):0}%</div><div class="stat-label">Completion Rate</div></div></div></div>
+        </div>
+        <div class="eco-card">
+          <div class="eco-card-title"><i class="fas fa-history text-primary"></i> Pickup History</div>
+          <div class="table-responsive">
+            <table class="eco-table">
+              <thead><tr><th>#</th><th>Citizen</th><th>Type</th><th>Date</th><th>Status</th></tr></thead>
+              <tbody>
+                ${reqs.slice(0,10).map(r=>`<tr><td><b>#${r.id}</b></td><td>${r.citizen_name}</td><td>${wasteTypeBadge(r.waste_type)}</td><td>${formatDate(r.preferred_date)}</td><td>${statusBadge(r.status)}</td></tr>`).join('')||'<tr><td colspan="5" class="text-center text-muted py-3">No history yet.</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+        </div>`;
+
+    } else {
+      // Admin
+      const stats = await apiRequest('/admin/stats');
+      const s = stats?.stats || {};
+      html = `
+        <div class="row g-3">
+          <div class="col-6 col-md-3"><div class="stat-card stat-green"><div class="stat-icon"><i class="fas fa-users"></i></div><div><div class="stat-value">${s.total_citizens||0}</div><div class="stat-label">Citizens</div></div></div></div>
+          <div class="col-6 col-md-3"><div class="stat-card stat-blue"><div class="stat-icon"><i class="fas fa-truck"></i></div><div><div class="stat-value">${s.total_collectors||0}</div><div class="stat-label">Collectors</div></div></div></div>
+          <div class="col-6 col-md-3"><div class="stat-card stat-amber"><div class="stat-icon"><i class="fas fa-inbox"></i></div><div><div class="stat-value">${s.pending_requests||0}</div><div class="stat-label">Pending</div></div></div></div>
+          <div class="col-6 col-md-3"><div class="stat-card stat-red"><div class="stat-icon"><i class="fas fa-triangle-exclamation"></i></div><div><div class="stat-value">${s.open_complaints||0}</div><div class="stat-label">Open Complaints</div></div></div></div>
+        </div>`;
+    }
+
+    box.innerHTML = html;
+  }
+
+  loadProfile();
+</script>
+</body>
+</html>

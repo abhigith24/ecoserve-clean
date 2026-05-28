@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Complaints – EcoServe</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+  <link href="/css/style.css" rel="stylesheet"/>
+</head>
+<body>
+<nav class="eco-navbar" id="app-navbar"></nav>
+<div class="sidebar" id="app-sidebar"></div>
+<div class="main-content">
+  <div class="page-header">
+    <div><h1 class="page-title">My Complaints</h1><p class="page-subtitle">File and track your complaints</p></div>
+    <button class="btn-eco-primary" onclick="openNewComplaint()"><i class="fas fa-plus"></i> New Complaint</button>
+  </div>
+
+  <div class="row g-3" id="complaints-grid">
+    <div class="col-12 text-center py-5"><div class="eco-spinner"></div></div>
+  </div>
+</div>
+
+<!-- New Complaint Modal -->
+<div class="modal fade" id="complaintModal" tabindex="-1">
+  <div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title"><i class="fas fa-triangle-exclamation me-2"></i>File a Complaint</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <div id="complaint-alert"></div>
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="form-label">Complaint Type *</label>
+          <div class="row g-2">
+            <div class="col-6 col-md-4">
+              <label style="display:flex;align-items:center;gap:.5rem;padding:.6rem .75rem;border:1.5px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:.85rem;">
+                <input type="radio" name="ctype" value="missed_pickup" checked/> 🚛 Missed Pickup
+              </label>
+            </div>
+            <div class="col-6 col-md-4">
+              <label style="display:flex;align-items:center;gap:.5rem;padding:.6rem .75rem;border:1.5px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:.85rem;">
+                <input type="radio" name="ctype" value="improper_disposal"/> 🗑️ Improper Disposal
+              </label>
+            </div>
+            <div class="col-6 col-md-4">
+              <label style="display:flex;align-items:center;gap:.5rem;padding:.6rem .75rem;border:1.5px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:.85rem;">
+                <input type="radio" name="ctype" value="collector_behavior"/> 👤 Collector Behavior
+              </label>
+            </div>
+            <div class="col-6 col-md-4">
+              <label style="display:flex;align-items:center;gap:.5rem;padding:.6rem .75rem;border:1.5px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:.85rem;">
+                <input type="radio" name="ctype" value="bin_damage"/> 🪣 Bin Damage
+              </label>
+            </div>
+            <div class="col-6 col-md-4">
+              <label style="display:flex;align-items:center;gap:.5rem;padding:.6rem .75rem;border:1.5px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:.85rem;">
+                <input type="radio" name="ctype" value="other"/> ❓ Other
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Subject *</label>
+          <input type="text" class="form-control" id="c-subject" placeholder="Brief subject of your complaint"/>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Description *</label>
+          <textarea class="form-control" id="c-description" rows="4" placeholder="Describe your issue in detail..."></textarea>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Ward No. (if applicable)</label>
+          <input type="text" class="form-control" id="c-ward" placeholder="e.g. 04"/>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      <button class="btn-eco-primary" id="submit-complaint-btn" onclick="submitComplaint()"><i class="fas fa-paper-plane"></i> Submit Complaint</button>
+    </div>
+  </div></div>
+</div>
+
+<div class="modal fade" id="notifModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-scrollable"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Notifications</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body" id="notif-body"></div>
+  </div></div>
+</div>
+
+<div id="toast-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/main.js"></script><script src="/js/layout.js"></script>
+<script>
+  if (!requireAuth('citizen')) {}
+  buildLayout('complaints');
+  const user = Auth.getUser();
+  if (user?.ward_no) document.getElementById('c-ward').value = user.ward_no;
+
+  const typeIcon = { missed_pickup:'🚛', improper_disposal:'🗑️', collector_behavior:'👤', bin_damage:'🪣', other:'❓' };
+
+  async function loadComplaints() {
+    const data = await apiRequest('/complaints/my');
+    const grid = document.getElementById('complaints-grid');
+    if (!data?.success || !data.complaints.length) {
+      grid.innerHTML = `<div class="col-12"><div class="empty-state">
+        <div class="empty-icon">✅</div><h4>No Complaints Filed</h4>
+        <p>If you have an issue, don't hesitate to report it.</p>
+        <button class="btn-eco-primary mt-3" onclick="openNewComplaint()"><i class="fas fa-plus"></i> File a Complaint</button>
+      </div></div>`;
+      return;
+    }
+    grid.innerHTML = data.complaints.map(c => `
+      <div class="col-md-6 col-lg-4">
+        <div class="eco-card h-100">
+          <div class="d-flex justify-content-between mb-2">
+            <span style="font-size:1.4rem;">${typeIcon[c.complaint_type]||'❓'}</span>
+            ${statusBadge(c.status)}
+          </div>
+          <h6 style="font-family:var(--font-display);font-weight:700;">${c.subject}</h6>
+          <p class="text-muted" style="font-size:.82rem;">${c.description.length>120?c.description.slice(0,120)+'…':c.description}</p>
+          <div style="font-size:.75rem;color:var(--gray-400);margin-bottom:.75rem;"><i class="fas fa-calendar me-1"></i>${formatDate(c.created_at)}</div>
+          ${c.admin_response
+            ? `<div class="eco-alert eco-alert-success" style="font-size:.8rem;">
+                <div><b><i class="fas fa-comment-dots me-1"></i>Admin Response:</b></div>
+                <div style="margin-top:.3rem;">${c.admin_response}</div>
+                ${c.resolved_at?`<div style="margin-top:.3rem;font-size:.72rem;color:var(--green-700);">Resolved on ${formatDate(c.resolved_at)}</div>`:''}
+               </div>`
+            : `<div class="eco-alert eco-alert-warning" style="font-size:.78rem;"><i class="fas fa-clock"></i> Awaiting admin response</div>`}
+        </div>
+      </div>`).join('');
+  }
+
+  function openNewComplaint() {
+    document.getElementById('complaint-alert').innerHTML = '';
+    document.getElementById('c-subject').value = '';
+    document.getElementById('c-description').value = '';
+    document.querySelector('input[name="ctype"][value="missed_pickup"]').checked = true;
+    new bootstrap.Modal(document.getElementById('complaintModal')).show();
+  }
+
+  async function submitComplaint() {
+    const btn = document.getElementById('submit-complaint-btn');
+    const alertBox = document.getElementById('complaint-alert');
+    alertBox.innerHTML = '';
+    setLoading(btn, true);
+
+    const type = document.querySelector('input[name="ctype"]:checked')?.value;
+    const data = await apiRequest('/complaints', 'POST', {
+      complaint_type: type,
+      subject:        document.getElementById('c-subject').value,
+      description:    document.getElementById('c-description').value,
+      ward_no:        document.getElementById('c-ward').value
+    });
+
+    setLoading(btn, false);
+
+    if (data?.success) {
+      bootstrap.Modal.getInstance(document.getElementById('complaintModal')).hide();
+      showToast('Complaint submitted successfully!', 'success');
+      loadComplaints();
+    } else {
+      const msg = data?.errors ? data.errors.map(e=>e.msg).join(', ') : (data?.message || 'Failed');
+      alertBox.innerHTML = `<div class="eco-alert eco-alert-error mb-3"><i class="fas fa-exclamation-circle"></i> ${msg}</div>`;
+    }
+  }
+
+  loadComplaints();
+</script>
+</body>
+</html>

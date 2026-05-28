@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Schedule – EcoServe</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+  <link href="/css/style.css" rel="stylesheet"/>
+  <style>
+    .schedule-card {
+      background: var(--white); border-radius: var(--radius); padding: 1.25rem 1.4rem;
+      border: 1px solid var(--border); border-left: 5px solid var(--green-500);
+      transition: all var(--transition);
+    }
+    .schedule-card:hover { box-shadow: var(--shadow); transform: translateX(3px); }
+    .schedule-card.shift-morning  { border-left-color: #f59e0b; }
+    .schedule-card.shift-afternoon{ border-left-color: #3b82f6; }
+    .schedule-card.shift-evening  { border-left-color: #8b5cf6; }
+    .schedule-card.status-completed { opacity: .65; }
+  </style>
+</head>
+<body>
+<nav class="eco-navbar" id="app-navbar"></nav>
+<div class="sidebar" id="app-sidebar"></div>
+<div class="main-content">
+  <div class="page-header">
+    <div><h1 class="page-title">My Schedule</h1><p class="page-subtitle">Upcoming and past collection schedules</p></div>
+  </div>
+
+  <div id="schedule-list">
+    <div class="text-center py-5"><div class="eco-spinner"></div></div>
+  </div>
+</div>
+
+<div class="modal fade" id="notifModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-scrollable"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Notifications</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body" id="notif-body"></div>
+  </div></div>
+</div>
+
+<div id="toast-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/main.js"></script><script src="/js/layout.js"></script>
+<script>
+  if (!requireAuth('collector')) {}
+  buildLayout('schedules');
+
+  const shiftInfo = {
+    morning:   { icon: '🌅', label: 'Morning',   time: '8AM – 12PM',  color: '#f59e0b' },
+    afternoon: { icon: '☀️', label: 'Afternoon', time: '12PM – 4PM', color: '#3b82f6' },
+    evening:   { icon: '🌇', label: 'Evening',   time: '4PM – 8PM',  color: '#8b5cf6' }
+  };
+
+  async function loadSchedules() {
+    const data = await apiRequest('/schedules/my');
+    const list = document.getElementById('schedule-list');
+    if (!data?.success || !data.schedules.length) {
+      list.innerHTML = '<div class="empty-state"><div class="empty-icon">📅</div><h4>No Schedules Assigned</h4><p>Check back later for upcoming schedules.</p></div>';
+      return;
+    }
+
+    const grouped = {};
+    data.schedules.forEach(s => {
+      const d = s.scheduled_date.slice(0,10);
+      if (!grouped[d]) grouped[d] = [];
+      grouped[d].push(s);
+    });
+
+    const today = new Date().toISOString().slice(0,10);
+    let html = '';
+    Object.keys(grouped).sort().forEach(date => {
+      const isToday = date === today;
+      const isPast  = date < today;
+      html += `
+        <div class="mb-4">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <div style="height:2px;flex:1;background:var(--border);"></div>
+            <span style="font-family:var(--font-display);font-size:.85rem;font-weight:700;color:${isToday?'var(--green-700)':'var(--text-muted)'};white-space:nowrap;padding:0 .75rem;background:var(--bg);border-radius:20px;border:1px solid var(--border);">
+              ${isToday ? '📍 Today — ' : ''}${new Date(date+'T00:00:00').toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric'})}
+            </span>
+            <div style="height:2px;flex:1;background:var(--border);"></div>
+          </div>
+          <div class="row g-3">
+            ${grouped[date].map(s => {
+              const si = shiftInfo[s.shift] || shiftInfo.morning;
+              return `
+              <div class="col-md-6 col-lg-4">
+                <div class="schedule-card shift-${s.shift} status-${s.status}">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span style="font-size:1.6rem;">${si.icon}</span>
+                    ${statusBadge(s.status)}
+                  </div>
+                  <h6 style="font-family:var(--font-display);font-weight:700;margin-bottom:.25rem;">${si.label} Shift</h6>
+                  <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:.5rem;">⏰ ${si.time}</div>
+                  <div style="font-size:.82rem;">
+                    <div><i class="fas fa-map-pin me-1" style="color:${si.color};"></i><b>${s.zone}</b>${s.ward_no?' — Ward '+s.ward_no:''}</div>
+                    ${s.route_notes?`<div class="mt-1"><i class="fas fa-route me-1 text-muted"></i>${s.route_notes}</div>`:''}
+                  </div>
+                  ${s.status === 'scheduled' && !isPast ? `
+                  <button class="btn-eco-primary w-100 mt-3" style="font-size:.8rem;padding:.5rem;" onclick="startSchedule(${s.id}, this)">
+                    <i class="fas fa-play"></i> Start Collection
+                  </button>` : ''}
+                  ${s.status === 'in_progress' ? `
+                  <button class="btn-eco-primary w-100 mt-3" style="font-size:.8rem;padding:.5rem;background:var(--green-600);" onclick="completeSchedule(${s.id}, this)">
+                    <i class="fas fa-flag-checkered"></i> Mark Complete
+                  </button>` : ''}
+                </div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>`;
+    });
+    list.innerHTML = html;
+  }
+
+  async function startSchedule(id, btn) {
+    btn.disabled = true;
+    const data = await apiRequest(`/schedules/${id}/status`, 'PUT', { status: 'in_progress' });
+    if (data?.success) { showToast('Collection started!', 'success'); loadSchedules(); }
+    else { btn.disabled = false; showToast('Failed', 'error'); }
+  }
+
+  async function completeSchedule(id, btn) {
+    btn.disabled = true;
+    const data = await apiRequest(`/schedules/${id}/status`, 'PUT', { status: 'completed' });
+    if (data?.success) { showToast('Schedule completed! 🎉', 'success'); loadSchedules(); }
+    else { btn.disabled = false; showToast('Failed', 'error'); }
+  }
+
+  loadSchedules();
+</script>
+</body>
+</html>

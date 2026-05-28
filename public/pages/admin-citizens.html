@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Citizens – EcoServe Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+  <link href="/css/style.css" rel="stylesheet"/>
+</head>
+<body>
+<nav class="eco-navbar" id="app-navbar"></nav>
+<div class="sidebar" id="app-sidebar"></div>
+<div class="main-content">
+  <div class="page-header">
+    <div><h1 class="page-title">Citizens</h1><p class="page-subtitle">All registered citizens</p></div>
+  </div>
+
+  <div class="eco-card">
+    <div class="table-responsive">
+      <table class="eco-table">
+        <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Phone</th><th>Zone / Ward</th><th>Requests</th><th>Joined</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody id="citizens-tbody"><tr><td colspan="9" class="text-center py-5"><div class="eco-spinner"></div></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="notifModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-scrollable"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Notifications</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body" id="notif-body"></div>
+  </div></div>
+</div>
+
+<div id="toast-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/main.js"></script><script src="/js/layout.js"></script>
+<script>
+  if (!requireAuth('admin')) {}
+  buildLayout('citizens');
+
+  async function loadCitizens() {
+    const data = await apiRequest('/admin/citizens');
+    const tbody = document.getElementById('citizens-tbody');
+    if (!data?.success || !data.citizens.length) {
+      tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">👥</div><h4>No Citizens Yet</h4></div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.citizens.map(c => `
+      <tr>
+        <td><b style="color:var(--green-700);">#${c.id}</b></td>
+        <td>
+          <div class="d-flex align-items-center gap-2">
+            <div style="width:32px;height:32px;border-radius:50%;background:var(--green-200);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;color:var(--green-700);font-size:.75rem;flex-shrink:0;">
+              ${c.full_name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)}
+            </div>
+            <span class="fw-semibold">${c.full_name}</span>
+          </div>
+        </td>
+        <td>${c.email}</td>
+        <td>${c.phone||'—'}</td>
+        <td>${c.zone||'—'} / ${c.ward_no||'—'}</td>
+        <td><span class="badge-status badge-assigned">${c.total_requests} requests</span></td>
+        <td>${formatDate(c.created_at)}</td>
+        <td><span class="badge-status ${c.is_active?'badge-completed':'badge-cancelled'}">${c.is_active?'Active':'Inactive'}</span></td>
+        <td>
+          <button class="btn-eco-danger" style="font-size:.75rem;padding:.25rem .7rem;" onclick="toggleUser(${c.id}, this)">
+            ${c.is_active ? 'Deactivate' : 'Activate'}
+          </button>
+        </td>
+      </tr>`).join('');
+  }
+
+  async function toggleUser(id, btn) {
+    btn.disabled = true;
+    const data = await apiRequest(`/admin/users/${id}/toggle`, 'PUT');
+    btn.disabled = false;
+    if (data?.success) { showToast('Status updated!', 'success'); loadCitizens(); }
+    else showToast('Failed', 'error');
+  }
+
+  loadCitizens();
+</script>
+</body>
+</html>

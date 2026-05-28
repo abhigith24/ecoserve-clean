@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Register – EcoServe</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+  <link href="/css/style.css" rel="stylesheet"/>
+  <style>
+    body { background: var(--green-900); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem 1rem; }
+    .auth-card { background: var(--white); border-radius: var(--radius-lg); box-shadow: 0 24px 80px rgba(0,0,0,.35); width: 100%; max-width: 520px; overflow: hidden; }
+    .auth-header { background: linear-gradient(135deg, var(--green-800), var(--green-600)); padding: 2rem; text-align: center; }
+    .auth-header .brand { font-family: var(--font-display); font-size: 1.8rem; font-weight: 800; color: #fff; }
+    .auth-header p { color: rgba(255,255,255,.75); margin-top: .4rem; font-size: .9rem; }
+    .auth-body { padding: 2rem; }
+    .role-selector { display: flex; gap: .75rem; margin-bottom: 1.5rem; }
+    .role-btn {
+      flex: 1; padding: .85rem .5rem; border-radius: var(--radius); border: 2px solid var(--border);
+      background: var(--white); text-align: center; cursor: pointer; transition: all var(--transition);
+    }
+    .role-btn .role-icon { font-size: 1.6rem; margin-bottom: .3rem; }
+    .role-btn .role-name { font-family: var(--font-display); font-size: .85rem; font-weight: 700; color: var(--text); }
+    .role-btn .role-desc { font-size: .72rem; color: var(--text-muted); }
+    .role-btn.selected { border-color: var(--green-500); background: var(--green-50); }
+    .role-btn.selected .role-name { color: var(--green-700); }
+  </style>
+</head>
+<body>
+<div class="auth-card">
+  <div class="auth-header">
+    <div class="brand">🌿 EcoServe</div>
+    <p>Create your free account</p>
+  </div>
+  <div class="auth-body">
+    <div id="alert-box"></div>
+
+    <!-- Role Selection -->
+    <div class="mb-3">
+      <label class="form-label">I am a...</label>
+      <div class="role-selector">
+        <div class="role-btn selected" data-role="citizen" onclick="selectRole('citizen', this)">
+          <div class="role-icon">🏠</div>
+          <div class="role-name">Citizen</div>
+          <div class="role-desc">Request pickups</div>
+        </div>
+        <div class="role-btn" data-role="collector" onclick="selectRole('collector', this)">
+          <div class="role-icon">🚛</div>
+          <div class="role-name">Collector</div>
+          <div class="role-desc">Handle collections</div>
+        </div>
+      </div>
+      <input type="hidden" id="role" value="citizen"/>
+    </div>
+
+    <form id="register-form">
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="form-label">Full Name</label>
+          <input type="text" class="form-control" id="full_name" placeholder="Priya Sharma" required/>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Email Address</label>
+          <input type="email" class="form-control" id="email" placeholder="you@example.com" required/>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Password</label>
+          <input type="password" class="form-control" id="password" placeholder="Min. 6 characters" required minlength="6"/>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Phone Number</label>
+          <input type="tel" class="form-control" id="phone" placeholder="9876543210"/>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Address</label>
+          <textarea class="form-control" id="address" rows="2" placeholder="House No, Street, Area"></textarea>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Ward No.</label>
+          <input type="text" class="form-control" id="ward_no" placeholder="e.g. 04"/>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Zone</label>
+          <select class="form-select" id="zone">
+            <option value="">-- Select Zone --</option>
+            <option value="Central">Central Zone</option>
+            <option value="North">North Zone</option>
+            <option value="South">South Zone</option>
+            <option value="East">East Zone</option>
+            <option value="West">West Zone</option>
+          </select>
+        </div>
+        <div class="col-12 mt-2">
+          <button type="submit" class="btn-eco-primary w-100 justify-content-center" id="register-btn" style="font-size:1rem;padding:.75rem;">
+            <i class="fas fa-user-plus"></i> Create Account
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <p class="text-center mt-3 text-muted" style="font-size:.875rem;">
+      Already have an account? <a href="/pages/login.html" style="color:var(--green-600);font-weight:600;">Login here</a>
+    </p>
+    <p class="text-center mt-1"><a href="/" style="color:var(--text-muted);font-size:.8rem;"><i class="fas fa-arrow-left"></i> Back to Home</a></p>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/main.js"></script>
+<script>
+  if (Auth.isLoggedIn()) window.location.href = '/';
+
+  function selectRole(role, el) {
+    document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('role').value = role;
+  }
+
+  document.getElementById('register-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('register-btn');
+    const alertBox = document.getElementById('alert-box');
+    alertBox.innerHTML = '';
+    setLoading(btn, true);
+
+    const payload = {
+      full_name: document.getElementById('full_name').value,
+      email:     document.getElementById('email').value,
+      password:  document.getElementById('password').value,
+      phone:     document.getElementById('phone').value,
+      role:      document.getElementById('role').value,
+      address:   document.getElementById('address').value,
+      ward_no:   document.getElementById('ward_no').value,
+      zone:      document.getElementById('zone').value
+    };
+
+    const data = await apiRequest('/auth/register', 'POST', payload);
+    setLoading(btn, false);
+
+    if (data && data.success) {
+      alertBox.innerHTML = `<div class="eco-alert eco-alert-success mb-3"><i class="fas fa-check-circle"></i> ${data.message} Redirecting to login...</div>`;
+      setTimeout(() => window.location.href = '/pages/login.html', 1800);
+    } else {
+      const msg = data?.errors ? data.errors.map(e => e.msg).join(', ') : (data?.message || 'Registration failed.');
+      alertBox.innerHTML = `<div class="eco-alert eco-alert-error mb-3"><i class="fas fa-exclamation-circle"></i> ${msg}</div>`;
+    }
+  });
+</script>
+</body>
+</html>

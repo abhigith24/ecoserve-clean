@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Submit Report – EcoServe</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+  <link href="/css/style.css" rel="stylesheet"/>
+</head>
+<body>
+<nav class="eco-navbar" id="app-navbar"></nav>
+<div class="sidebar" id="app-sidebar"></div>
+<div class="main-content">
+
+  <div class="page-header">
+    <div><h1 class="page-title">Waste Reports</h1><p class="page-subtitle">Submit collection reports and view history</p></div>
+    <button class="btn-eco-primary" onclick="openSubmitModal()"><i class="fas fa-plus"></i> Submit Report</button>
+  </div>
+
+  <!-- My report stats -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="stat-card stat-green">
+        <div class="stat-icon"><i class="fas fa-weight-hanging"></i></div>
+        <div><div class="stat-value" id="total-kg">—</div><div class="stat-label">Total Collected (kg)</div></div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-card stat-blue">
+        <div class="stat-icon"><i class="fas fa-file-lines"></i></div>
+        <div><div class="stat-value" id="total-reports">—</div><div class="stat-label">Reports Submitted</div></div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-card stat-amber">
+        <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
+        <div><div class="stat-value" id="this-month">—</div><div class="stat-label">This Month (kg)</div></div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-card stat-purple" style="">
+        <div class="stat-icon" style="background:#ede9fe;color:#7c3aed;"><i class="fas fa-recycle"></i></div>
+        <div><div class="stat-value" id="recyclable-kg">—</div><div class="stat-label">Recyclable (kg)</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reports Table -->
+  <div class="eco-card">
+    <div class="eco-card-title"><i class="fas fa-history text-primary"></i> My Submission History</div>
+    <div class="table-responsive">
+      <table class="eco-table">
+        <thead><tr><th>#</th><th>Waste Type</th><th>Weight (kg)</th><th>Collection Date</th><th>Pickup Req.</th><th>Disposal Site</th><th>Remarks</th></tr></thead>
+        <tbody id="reports-tbody">
+          <tr><td colspan="7" class="text-center py-5"><div class="eco-spinner"></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Submit Report Modal -->
+<div class="modal fade" id="submitModal" tabindex="-1">
+  <div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title"><i class="fas fa-clipboard-list me-2"></i>Submit Waste Collection Report</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <div id="submit-alert"></div>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Waste Type *</label>
+          <select class="form-select" id="rep-type">
+            <option value="general">🗑️ General</option>
+            <option value="recyclable">♻️ Recyclable</option>
+            <option value="organic">🌿 Organic</option>
+            <option value="hazardous">☣️ Hazardous</option>
+            <option value="e-waste">💻 E-Waste</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Total Weight Collected (kg) *</label>
+          <input type="number" class="form-control" id="rep-weight" placeholder="e.g. 25.5" min="0.1" step="0.1"/>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Collection Date *</label>
+          <input type="date" class="form-control" id="rep-date"/>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Linked Pickup Request ID</label>
+          <select class="form-select" id="rep-request">
+            <option value="">— Not linked to a request —</option>
+          </select>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Disposal Site / Facility</label>
+          <input type="text" class="form-control" id="rep-site" placeholder="e.g. North Landfill, Jaipur Recycling Centre"/>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Remarks</label>
+          <textarea class="form-control" id="rep-remarks" rows="3" placeholder="Any notes about this collection run..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      <button class="btn-eco-primary" id="submit-rep-btn" onclick="submitReport()"><i class="fas fa-paper-plane"></i> Submit Report</button>
+    </div>
+  </div></div>
+</div>
+
+<!-- Notification Modal -->
+<div class="modal fade" id="notifModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-scrollable"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title"><i class="fas fa-bell me-2"></i>Notifications</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body" id="notif-body"></div>
+  </div></div>
+</div>
+
+<div id="toast-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/main.js"></script><script src="/js/layout.js"></script>
+<script>
+  if (!requireAuth('collector')) {}
+  buildLayout('assigned');
+
+  // Default date to today
+  document.getElementById('rep-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('rep-date').max   = new Date().toISOString().split('T')[0];
+
+  async function loadReports() {
+    const data = await apiRequest('/reports/my');
+    const tbody = document.getElementById('reports-tbody');
+    if (!data?.success || !data.reports.length) {
+      tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">📋</div><h4>No Reports Yet</h4><p>Submit your first collection report.</p></div></td></tr>';
+      document.getElementById('total-kg').textContent      = '0';
+      document.getElementById('total-reports').textContent = '0';
+      document.getElementById('this-month').textContent    = '0';
+      document.getElementById('recyclable-kg').textContent = '0';
+      return;
+    }
+    const reports = data.reports;
+    const now     = new Date();
+    const thisMonth = reports.filter(r => {
+      const d = new Date(r.collection_date);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    });
+
+    document.getElementById('total-kg').textContent      = reports.reduce((s, r) => s + parseFloat(r.total_weight_kg), 0).toFixed(1);
+    document.getElementById('total-reports').textContent = reports.length;
+    document.getElementById('this-month').textContent    = thisMonth.reduce((s, r) => s + parseFloat(r.total_weight_kg), 0).toFixed(1);
+    document.getElementById('recyclable-kg').textContent = reports.filter(r => r.waste_type === 'recyclable').reduce((s, r) => s + parseFloat(r.total_weight_kg), 0).toFixed(1);
+
+    tbody.innerHTML = reports.map(r => `
+      <tr>
+        <td><b style="color:var(--green-700);">#${r.id}</b></td>
+        <td>${wasteTypeBadge(r.waste_type)}</td>
+        <td><b>${parseFloat(r.total_weight_kg).toFixed(2)}</b></td>
+        <td>${formatDate(r.collection_date)}</td>
+        <td>${r.request_id ? `<span class="badge-status badge-assigned">#${r.request_id}</span>` : '<span class="text-muted">—</span>'}</td>
+        <td style="font-size:.8rem;">${r.disposal_site || '—'}</td>
+        <td style="font-size:.8rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.remarks||''}">${r.remarks || '—'}</td>
+      </tr>`).join('');
+  }
+
+  async function openSubmitModal() {
+    // Load completed pickups to link
+    const data = await apiRequest('/requests/assigned');
+    const sel  = document.getElementById('rep-request');
+    sel.innerHTML = '<option value="">— Not linked to a request —</option>';
+    if (data?.success) {
+      data.requests
+        .filter(r => r.status === 'in_progress' || r.status === 'assigned')
+        .forEach(r => {
+          sel.innerHTML += `<option value="${r.id}">#${r.id} — ${r.waste_type} — ${r.address.slice(0,40)}</option>`;
+        });
+    }
+    document.getElementById('submit-alert').innerHTML = '';
+    new bootstrap.Modal(document.getElementById('submitModal')).show();
+  }
+
+  async function submitReport() {
+    const btn      = document.getElementById('submit-rep-btn');
+    const alertBox = document.getElementById('submit-alert');
+    alertBox.innerHTML = '';
+
+    const weight = document.getElementById('rep-weight').value;
+    const date   = document.getElementById('rep-date').value;
+    if (!weight || parseFloat(weight) <= 0) {
+      alertBox.innerHTML = `<div class="eco-alert eco-alert-error mb-3"><i class="fas fa-exclamation-circle"></i> Please enter a valid weight.</div>`;
+      return;
+    }
+    if (!date) {
+      alertBox.innerHTML = `<div class="eco-alert eco-alert-error mb-3"><i class="fas fa-exclamation-circle"></i> Collection date is required.</div>`;
+      return;
+    }
+
+    setLoading(btn, true);
+    const data = await apiRequest('/reports', 'POST', {
+      waste_type:      document.getElementById('rep-type').value,
+      total_weight_kg: parseFloat(weight),
+      collection_date: date,
+      request_id:      document.getElementById('rep-request').value || null,
+      disposal_site:   document.getElementById('rep-site').value,
+      remarks:         document.getElementById('rep-remarks').value
+    });
+    setLoading(btn, false);
+
+    if (data?.success) {
+      bootstrap.Modal.getInstance(document.getElementById('submitModal')).hide();
+      showToast('Report submitted successfully! ✅', 'success');
+      // Reset form
+      document.getElementById('rep-weight').value  = '';
+      document.getElementById('rep-site').value    = '';
+      document.getElementById('rep-remarks').value = '';
+      document.getElementById('rep-date').value    = new Date().toISOString().split('T')[0];
+      loadReports();
+    } else {
+      const msg = data?.errors ? data.errors.map(e => e.msg).join(', ') : (data?.message || 'Submission failed.');
+      alertBox.innerHTML = `<div class="eco-alert eco-alert-error mb-3"><i class="fas fa-exclamation-circle"></i> ${msg}</div>`;
+    }
+  }
+
+  loadReports();
+</script>
+</body>
+</html>

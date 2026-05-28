@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Collectors – EcoServe Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+  <link href="/css/style.css" rel="stylesheet"/>
+</head>
+<body>
+<nav class="eco-navbar" id="app-navbar"></nav>
+<div class="sidebar" id="app-sidebar"></div>
+<div class="main-content">
+  <div class="page-header">
+    <div><h1 class="page-title">Collectors</h1><p class="page-subtitle">Manage waste collection staff</p></div>
+  </div>
+
+  <div class="row g-3" id="collectors-grid">
+    <div class="col-12 text-center py-5"><div class="eco-spinner"></div></div>
+  </div>
+</div>
+
+<div class="modal fade" id="notifModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-scrollable"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Notifications</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body" id="notif-body"></div>
+  </div></div>
+</div>
+
+<div id="toast-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/main.js"></script><script src="/js/layout.js"></script>
+<script>
+  if (!requireAuth('admin')) {}
+  buildLayout('collectors');
+
+  async function loadCollectors() {
+    const data = await apiRequest('/admin/collectors');
+    const grid = document.getElementById('collectors-grid');
+    if (!data?.success || !data.collectors.length) {
+      grid.innerHTML = '<div class="col-12"><div class="empty-state"><div class="empty-icon">🚛</div><h4>No Collectors Registered</h4></div></div>';
+      return;
+    }
+    grid.innerHTML = data.collectors.map(c => {
+      const initials = c.full_name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);
+      const rate = c.total_assigned > 0 ? Math.round((c.completed/c.total_assigned)*100) : 0;
+      return `
+      <div class="col-md-6 col-lg-4">
+        <div class="eco-card h-100">
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <div style="width:52px;height:52px;border-radius:50%;background:${c.is_active?'var(--green-500)':'#9ca3af'};display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;color:#fff;font-size:1.1rem;">${initials}</div>
+            <div>
+              <div style="font-family:var(--font-display);font-weight:700;">${c.full_name}</div>
+              <div style="font-size:.78rem;color:var(--text-muted);">${c.email}</div>
+            </div>
+            <span class="ms-auto badge-status ${c.is_active?'badge-completed':'badge-cancelled'}">${c.is_active?'Active':'Inactive'}</span>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-6"><div style="background:var(--green-50);border-radius:8px;padding:.65rem;text-align:center;">
+              <div style="font-family:var(--font-display);font-size:1.3rem;font-weight:800;color:var(--green-700);">${c.total_assigned}</div>
+              <div style="font-size:.72rem;color:var(--text-muted);">Assigned</div>
+            </div></div>
+            <div class="col-6"><div style="background:var(--green-50);border-radius:8px;padding:.65rem;text-align:center;">
+              <div style="font-family:var(--font-display);font-size:1.3rem;font-weight:800;color:var(--green-700);">${c.completed}</div>
+              <div style="font-size:.72rem;color:var(--text-muted);">Completed</div>
+            </div></div>
+          </div>
+          <div class="mb-3">
+            <div class="d-flex justify-content-between mb-1" style="font-size:.78rem;">
+              <span class="text-muted">Completion Rate</span><b>${rate}%</b>
+            </div>
+            <div style="background:var(--border);border-radius:10px;height:6px;">
+              <div style="background:var(--green-500);height:6px;border-radius:10px;width:${rate}%;transition:width .6s ease;"></div>
+            </div>
+          </div>
+          <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:1rem;">
+            <i class="fas fa-map-marker-alt me-1"></i>${c.zone||'—'} &nbsp;·&nbsp; <i class="fas fa-phone me-1"></i>${c.phone||'—'}
+          </div>
+          <button class="btn-eco-danger w-100" style="font-size:.8rem;" onclick="toggleUser(${c.id}, this)">
+            ${c.is_active ? '<i class="fas fa-ban"></i> Deactivate' : '<i class="fas fa-check"></i> Activate'}
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  async function toggleUser(id, btn) {
+    btn.disabled = true;
+    const data = await apiRequest(`/admin/users/${id}/toggle`, 'PUT');
+    btn.disabled = false;
+    if (data?.success) { showToast('Status updated!', 'success'); loadCollectors(); }
+    else showToast('Failed', 'error');
+  }
+
+  loadCollectors();
+</script>
+</body>
+</html>

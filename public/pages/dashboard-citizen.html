@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Citizen Dashboard – EcoServe</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+  <link href="/css/style.css" rel="stylesheet"/>
+</head>
+<body>
+<nav class="eco-navbar" id="app-navbar"></nav>
+<div class="sidebar" id="app-sidebar"></div>
+<div class="main-content">
+
+  <div class="page-header">
+    <div>
+      <h1 class="page-title" id="welcome-msg">Welcome!</h1>
+      <p class="page-subtitle">Your waste management overview</p>
+    </div>
+    <a href="citizen-request.html" class="btn-eco-primary"><i class="fas fa-plus"></i> New Pickup Request</a>
+  </div>
+
+  <!-- Stats -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="stat-card stat-amber">
+        <div class="stat-icon"><i class="fas fa-hourglass-half"></i></div>
+        <div><div class="stat-value" id="cnt-pending">—</div><div class="stat-label">Pending</div></div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-card stat-blue">
+        <div class="stat-icon"><i class="fas fa-truck"></i></div>
+        <div><div class="stat-value" id="cnt-assigned">—</div><div class="stat-label">Assigned</div></div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-card stat-green">
+        <div class="stat-icon"><i class="fas fa-circle-check"></i></div>
+        <div><div class="stat-value" id="cnt-completed">—</div><div class="stat-label">Completed</div></div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-card stat-red">
+        <div class="stat-icon"><i class="fas fa-triangle-exclamation"></i></div>
+        <div><div class="stat-value" id="cnt-complaints">—</div><div class="stat-label">Complaints</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <a href="citizen-request.html" style="text-decoration:none;">
+        <div class="eco-card d-flex align-items-center gap-3" style="cursor:pointer;">
+          <div style="width:48px;height:48px;border-radius:12px;background:var(--green-100);color:var(--green-700);display:flex;align-items:center;justify-content:center;font-size:1.3rem;">♻️</div>
+          <div><div style="font-family:var(--font-display);font-weight:700;">New Pickup Request</div><div style="font-size:.8rem;color:var(--text-muted);">Schedule waste collection</div></div>
+          <i class="fas fa-chevron-right ms-auto text-muted"></i>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-4">
+      <a href="citizen-my-requests.html" style="text-decoration:none;">
+        <div class="eco-card d-flex align-items-center gap-3" style="cursor:pointer;">
+          <div style="width:48px;height:48px;border-radius:12px;background:#dbeafe;color:#2563eb;display:flex;align-items:center;justify-content:center;font-size:1.3rem;">📋</div>
+          <div><div style="font-family:var(--font-display);font-weight:700;">My Requests</div><div style="font-size:.8rem;color:var(--text-muted);">Track pickup status</div></div>
+          <i class="fas fa-chevron-right ms-auto text-muted"></i>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-4">
+      <a href="citizen-complaints.html" style="text-decoration:none;">
+        <div class="eco-card d-flex align-items-center gap-3" style="cursor:pointer;">
+          <div style="width:48px;height:48px;border-radius:12px;background:#fee2e2;color:#dc2626;display:flex;align-items:center;justify-content:center;font-size:1.3rem;">🚨</div>
+          <div><div style="font-family:var(--font-display);font-weight:700;">File Complaint</div><div style="font-size:.8rem;color:var(--text-muted);">Report an issue</div></div>
+          <i class="fas fa-chevron-right ms-auto text-muted"></i>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Recent Requests -->
+  <div class="eco-card">
+    <div class="eco-card-title"><i class="fas fa-clock text-primary"></i> Recent Requests
+      <a href="citizen-my-requests.html" class="ms-auto btn-eco-outline" style="font-size:.78rem;padding:.3rem .9rem;">View All</a>
+    </div>
+    <div class="table-responsive">
+      <table class="eco-table">
+        <thead><tr><th>#</th><th>Type</th><th>Date</th><th>Address</th><th>Collector</th><th>Status</th></tr></thead>
+        <tbody id="recent-tbody">
+          <tr><td colspan="6" class="text-center py-4"><div class="eco-spinner"></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<div class="modal fade" id="notifModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-scrollable"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Notifications</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body" id="notif-body"></div>
+  </div></div>
+</div>
+
+<div id="toast-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/main.js"></script><script src="/js/layout.js"></script>
+<script>
+  if (!requireAuth('citizen')) {}
+  buildLayout('dashboard');
+  const user = Auth.getUser();
+  document.getElementById('welcome-msg').textContent = `Welcome, ${user.full_name.split(' ')[0]}! 🌿`;
+
+  async function loadStats() {
+    const data = await apiRequest('/requests/my');
+    if (!data?.success) return;
+    const reqs = data.requests;
+    document.getElementById('cnt-pending').textContent   = reqs.filter(r=>r.status==='pending').length;
+    document.getElementById('cnt-assigned').textContent  = reqs.filter(r=>['assigned','in_progress'].includes(r.status)).length;
+    document.getElementById('cnt-completed').textContent = reqs.filter(r=>r.status==='completed').length;
+
+    const tbody = document.getElementById('recent-tbody');
+    const recent = reqs.slice(0,6);
+    if (!recent.length) {
+      tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">🌱</div><h4>No Requests Yet</h4><p>Raise your first pickup request!</p></div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = recent.map(r => `
+      <tr>
+        <td><b style="color:var(--green-700);">#${r.id}</b></td>
+        <td>${wasteTypeBadge(r.waste_type)}</td>
+        <td>${formatDate(r.preferred_date)}</td>
+        <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.address}</td>
+        <td>${r.collector_name||'<span class="text-muted">Unassigned</span>'}</td>
+        <td>${statusBadge(r.status)}</td>
+      </tr>`).join('');
+  }
+
+  async function loadComplaintCount() {
+    const data = await apiRequest('/complaints/my');
+    if (data?.success) document.getElementById('cnt-complaints').textContent = data.complaints.filter(c=>c.status==='open').length;
+  }
+
+  loadStats();
+  loadComplaintCount();
+</script>
+</body>
+</html>

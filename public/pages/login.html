@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login – EcoServe</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+  <link href="/css/style.css" rel="stylesheet"/>
+  <style>
+    body { background: var(--green-900); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .auth-card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 24px 80px rgba(0,0,0,.35);
+      width: 100%; max-width: 440px;
+      overflow: hidden;
+    }
+    .auth-header {
+      background: linear-gradient(135deg, var(--green-800), var(--green-600));
+      padding: 2.5rem 2rem;
+      text-align: center;
+    }
+    .auth-header .brand { font-family: var(--font-display); font-size: 2rem; font-weight: 800; color: #fff; }
+    .auth-header p { color: rgba(255,255,255,.75); margin-top: .4rem; font-size: .9rem; }
+    .auth-body { padding: 2rem; }
+    .demo-pills { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+    .demo-pill {
+      flex: 1; min-width: 80px; padding: .5rem .75rem; border-radius: var(--radius-sm);
+      background: var(--green-50); border: 1.5px solid var(--green-100);
+      text-align: center; cursor: pointer; transition: var(--transition); font-size: .75rem;
+    }
+    .demo-pill:hover { background: var(--green-100); border-color: var(--green-300); }
+    .demo-pill strong { display: block; font-family: var(--font-display); font-size: .8rem; color: var(--green-700); }
+  </style>
+</head>
+<body>
+<div class="auth-card">
+  <div class="auth-header">
+    <div class="brand">🌿 EcoServe</div>
+    <p>Sign in to your account</p>
+  </div>
+  <div class="auth-body">
+    <!-- Demo quick-fill -->
+    <div class="mb-3">
+      <p class="text-muted" style="font-size:.75rem;margin-bottom:.5rem;font-family:var(--font-display);font-weight:700;text-transform:uppercase;letter-spacing:.06em;">Quick Demo Login</p>
+      <div class="demo-pills">
+        <div class="demo-pill" onclick="fillDemo('admin@ecoserve.com')"><strong>🔧 Admin</strong>admin@ecoserve.com</div>
+        <div class="demo-pill" onclick="fillDemo('collector@ecoserve.com')"><strong>🚛 Collector</strong>collector@ecoserve.com</div>
+        <div class="demo-pill" onclick="fillDemo('citizen@ecoserve.com')"><strong>🏠 Citizen</strong>citizen@ecoserve.com</div>
+      </div>
+    </div>
+
+    <div id="alert-box"></div>
+
+    <form id="login-form">
+      <div class="mb-3">
+        <label class="form-label">Email Address</label>
+        <div class="input-group">
+          <span class="input-group-text" style="background:var(--green-50);border-color:var(--border);"><i class="fas fa-envelope text-muted"></i></span>
+          <input type="email" class="form-control" id="email" placeholder="you@example.com" required/>
+        </div>
+      </div>
+      <div class="mb-4">
+        <label class="form-label">Password</label>
+        <div class="input-group">
+          <span class="input-group-text" style="background:var(--green-50);border-color:var(--border);"><i class="fas fa-lock text-muted"></i></span>
+          <input type="password" class="form-control" id="password" placeholder="••••••••" required/>
+          <button class="btn" type="button" id="toggle-pwd" style="border:1.5px solid var(--border);background:var(--green-50);">
+            <i class="fas fa-eye text-muted"></i>
+          </button>
+        </div>
+      </div>
+      <button type="submit" class="btn-eco-primary w-100 justify-content-center" id="login-btn" style="font-size:1rem;padding:.75rem;">
+        <i class="fas fa-sign-in-alt"></i> Login
+      </button>
+    </form>
+
+    <p class="text-center mt-3 text-muted" style="font-size:.875rem;">
+      Don't have an account? <a href="/pages/register.html" style="color:var(--green-600);font-weight:600;">Register here</a>
+    </p>
+    <p class="text-center mt-1"><a href="/" style="color:var(--text-muted);font-size:.8rem;"><i class="fas fa-arrow-left"></i> Back to Home</a></p>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/main.js"></script>
+<script>
+  if (Auth.isLoggedIn()) redirectByRole(Auth.getUser().role);
+
+  function redirectByRole(role) {
+    const map = { admin:'dashboard-admin', collector:'dashboard-collector', citizen:'dashboard-citizen' };
+    window.location.href = `/pages/${map[role]}.html`;
+  }
+
+  function fillDemo(email) {
+    document.getElementById('email').value = email;
+    document.getElementById('password').value = 'password';
+  }
+
+  // Toggle password visibility
+  document.getElementById('toggle-pwd').addEventListener('click', function() {
+    const inp = document.getElementById('password');
+    const icon = this.querySelector('i');
+    if (inp.type === 'password') { inp.type = 'text'; icon.classList.replace('fa-eye','fa-eye-slash'); }
+    else { inp.type = 'password'; icon.classList.replace('fa-eye-slash','fa-eye'); }
+  });
+
+  document.getElementById('login-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('login-btn');
+    const alertBox = document.getElementById('alert-box');
+    alertBox.innerHTML = '';
+    setLoading(btn, true);
+
+    const data = await apiRequest('/auth/login', 'POST', {
+      email:    document.getElementById('email').value,
+      password: document.getElementById('password').value
+    });
+
+    setLoading(btn, false);
+
+    if (data && data.success) {
+      Auth.save(data.token, data.user);
+      showToast(`Welcome back, ${data.user.full_name}! 🌿`, 'success');
+      setTimeout(() => redirectByRole(data.user.role), 800);
+    } else {
+      alertBox.innerHTML = `<div class="eco-alert eco-alert-error mb-3"><i class="fas fa-exclamation-circle"></i>${data?.message || 'Login failed.'}</div>`;
+    }
+  });
+</script>
+</body>
+</html>
