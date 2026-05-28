@@ -75,6 +75,7 @@ try {
     });
 
     const data = await response.json();
+    console.log(data);
 
     if (!response.ok) {
       console.error('Groq API error:', JSON.stringify(data));
